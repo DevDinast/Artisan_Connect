@@ -9,6 +9,10 @@ use App\Http\Controllers\Api\ImageController;
 use App\Http\Controllers\Api\ValidationController;
 use App\Http\Controllers\Api\PanierController;
 use App\Http\Controllers\Api\CommandeController;
+use App\Http\Controllers\Api\PaiementController;
+use App\Http\Controllers\Api\AvisController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\FavoriController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,13 +25,17 @@ use App\Http\Controllers\Api\CommandeController;
 |
 */
 
-// Routes publiques du catalogue
+// Routes publiques pour le catalogue
 Route::prefix('catalog')->group(function () {
     Route::get('categories', [CatalogController::class, 'categories']);
     Route::get('oeuvres', [CatalogController::class, 'oeuvres']);
     Route::get('oeuvres/{id}', [CatalogController::class, 'showOeuvre']);
     Route::get('oeuvres/{id}/similar', [CatalogController::class, 'similarOeuvres']);
     Route::get('stats', [CatalogController::class, 'stats']);
+    
+    // Routes publiques pour les avis
+    Route::get('oeuvres/{id}/avis', [AvisController::class, 'getAvisOeuvre']);
+    Route::get('artisans/{id}/avis/stats', [AvisController::class, 'getStatistiquesAvisArtisan']);
 });
 
 // Routes publiques d'authentification
@@ -133,6 +141,37 @@ Route::middleware(['auth:sanctum', 'verified', 'role:acheteur'])->prefix('achete
     Route::put('commandes/{id}/annuler', [CommandeController::class, 'annulerCommande']);
     Route::put('commandes/{id}/confirmer-reception', [CommandeController::class, 'confirmerReception']);
     Route::get('commandes/{id}/transactions', [CommandeController::class, 'getTransactionsCommande']);
+    
+    // Routes des paiements
+    Route::post('paiement/initier', [PaiementController::class, 'initierPaiement']);
+    Route::get('paiement/{id}/statut', [PaiementController::class, 'getStatutPaiement']);
+    Route::put('paiement/{id}/annuler', [PaiementController::class, 'annulerPaiement']);
+    Route::get('paiement/historique', [PaiementController::class, 'getHistoriquePaiements']);
+    Route::get('paiement/methodes', [PaiementController::class, 'getMethodesPaiement']);
+    
+    // Routes des avis
+    Route::post('avis', [AvisController::class, 'creerAvis']);
+    Route::get('mes-avis', [AvisController::class, 'getMesAvis']);
+    Route::put('avis/{id}', [AvisController::class, 'mettreAJourAvis']);
+    Route::delete('avis/{id}', [AvisController::class, 'supprimerAvis']);
+    Route::post('avis/{id}/signaler', [AvisController::class, 'signalerAvis']);
+    
+    // Routes des notifications
+    Route::get('notifications', [NotificationController::class, 'getNotifications']);
+    Route::get('notifications/non-lues', [NotificationController::class, 'getNotificationsNonLues']);
+    Route::put('notifications/{id}/lire', [NotificationController::class, 'marquerCommeLue']);
+    Route::put('notifications/tout-lire', [NotificationController::class, 'marquerToutesCommeLues']);
+    Route::delete('notifications/{id}', [NotificationController::class, 'supprimerNotification']);
+    Route::get('notifications/stats', [NotificationController::class, 'getStatistiquesNotifications']);
+    
+    // Routes des favoris
+    Route::post('favoris', [FavoriController::class, 'ajouterFavori']);
+    Route::get('favoris', [FavoriController::class, 'getFavoris']);
+    Route::delete('favoris/{id}', [FavoriController::class, 'supprimerFavori']);
+    Route::get('favoris/{oeuvreId}/verifier', [FavoriController::class, 'verifierFavori']);
+    Route::get('favoris/stats', [FavoriController::class, 'getStatistiquesFavoris']);
+    Route::get('favoris/categorie/{categorieId}', [FavoriController::class, 'getFavorisParCategorie']);
+    Route::get('favoris/recents', [FavoriController::class, 'getFavorisRecents']);
     
     Route::get('orders', function () {
         return response()->json([

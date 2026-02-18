@@ -1,5 +1,136 @@
 # ArtisanConnect - Changelog
 
+## JOUR 6 - PAIEMENT & SOCIAL (80%)
+**Date**: 2026-02-18  
+**Développeur**: Backend 1  
+**Tag**: v1.6.backend1
+
+### ✅ TÂCHES COMPLÉTÉES
+
+#### Paiement Mobile Money
+- [x] PaiementController avec 6 méthodes complètes
+- [x] PaiementService avec simulation Mobile Money
+- [x] Support Orange Money, MTN Money, Moov Money, Wave
+- [x] Workflow paiement complet (initier → vérifier → confirmer)
+- [x] Gestion expiration et annulation paiements
+- [x] Instructions paiement détaillées par opérateur
+
+#### Avis & Notations
+- [x] AvisController avec 7 méthodes complètes
+- [x] AvisService avec calcul notes moyennes
+- [x] Validation achat obligatoire pour noter
+- [x] Statistiques détaillées (distribution notes, moyennes)
+- [x] Signalement avis inappropriés
+- [x] Mise à jour notes moyennes œuvres/artisans
+
+#### Notifications
+- [x] NotificationController avec 7 méthodes complètes
+- [x] NotificationService avec gestion multi-types
+- [x] Notifications automatiques (ventes, paiements, avis)
+- [x] Marquage lecture individuel et global
+- [x] Statistiques et répartition par type
+- [x] Nettoyage automatique anciennes notifications
+
+#### Favoris
+- [x] FavoriController avec 7 méthodes complètes
+- [x] FavoriService avec statistiques avancées
+- [x] Vérification favoris en temps réel
+- [x] Filtrage par catégorie et favoris récents
+- [x] Synchronisation automatique œuvres validées
+- [x] Statistiques préférences utilisateurs
+
+#### Routes API Complètes
+- [x] 5 routes paiement (/api/acheteur/paiement/*)
+- [x] 6 routes avis (/api/acheteur/avis/*)
+- [x] 7 routes notifications (/api/acheteur/notifications/*)
+- [x] 7 routes favoris (/api/acheteur/favoris/*)
+- [x] 2 routes publiques avis (/api/catalog/*)
+
+### 📁 FICHIERS CRÉÉS/MODIFIÉS
+- `app/Http/Controllers/Api/PaiementController.php` - Gestion paiements
+- `app/Services/PaiementService.php` - Logique Mobile Money
+- `app/Http/Controllers/Api/AvisController.php` - Gestion avis
+- `app/Services/AvisService.php` - Logique notations
+- `app/Http/Controllers/Api/NotificationController.php` - Gestion notifications
+- `app/Services/NotificationService.php` - Logique notifications
+- `app/Http/Controllers/Api/FavoriController.php` - Gestion favoris
+- `app/Services/FavoriService.php` - Logique favoris
+- `app/Http/Requests/Api/InitierPaiementRequest.php` - Validation paiement
+- `app/Http/Requests/Api/CreateAvisRequest.php` - Validation avis
+- `app/Http/Requests/Api/UpdateAvisRequest.php` - Mise à jour avis
+- `app/Http/Requests/Api/CreateFavoriRequest.php` - Validation favoris
+- `routes/api.php` - 27 nouvelles routes API
+
+### 🔧 API ENDPOINTS JOUR 6
+**Paiement Mobile Money**:
+- `POST /api/acheteur/paiement/initier` - Initier paiement
+- `GET /api/acheteur/paiement/{id}/statut` - Vérifier statut
+- `PUT /api/acheteur/paiement/{id}/annuler` - Annuler paiement
+- `GET /api/acheteur/paiement/historique` - Historique paiements
+- `GET /api/acheteur/paiement/methodes` - Méthodes disponibles
+
+**Avis & Notations**:
+- `POST /api/acheteur/avis` - Créer avis
+- `GET /api/acheteur/mes-avis` - Mes avis
+- `PUT /api/acheteur/avis/{id}` - Mettre à jour avis
+- `DELETE /api/acheteur/avis/{id}` - Supprimer avis
+- `POST /api/acheteur/avis/{id}/signaler` - Signaler avis
+- `GET /api/catalog/oeuvres/{id}/avis` - Avis œuvre (public)
+- `GET /api/catalog/artisans/{id}/avis/stats` - Stats artisan (public)
+
+**Notifications**:
+- `GET /api/acheteur/notifications` - Liste notifications
+- `GET /api/acheteur/notifications/non-lues` - Non lues
+- `PUT /api/acheteur/notifications/{id}/lire` - Marquer lue
+- `PUT /api/acheteur/notifications/tout-lire` - Tout lire
+- `DELETE /api/acheteur/notifications/{id}` - Supprimer
+- `GET /api/acheteur/notifications/stats` - Statistiques
+
+**Favoris**:
+- `POST /api/acheteur/favoris` - Ajouter favori
+- `GET /api/acheteur/favoris` - Liste favoris
+- `DELETE /api/acheteur/favoris/{id}` - Supprimer favori
+- `GET /api/acheteur/favoris/{oeuvreId}/verifier` - Vérifier favori
+- `GET /api/acheteur/favoris/stats` - Statistiques favoris
+- `GET /api/acheteur/favoris/categorie/{categorieId}` - Par catégorie
+- `GET /api/acheteur/favoris/recents` - Favoris récents
+
+### 📱 SYSTÈME PAIEMENT MOBILE MONEY
+- **Opérateurs Supportés**: Orange Money, MTN Money, Moov Money, Wave
+- **Workflow**: Initiation → Instructions → Confirmation (15 min)
+- **Sécurité**: Référence unique, expiration automatique
+- **Instructions**: Étapes détaillées par opérateur
+- **Callback**: Confirmation automatique mise à jour statuts
+
+### ⭐ SYSTÈME AVIS & NOTATIONS
+- **Validation**: Uniquement après achat confirmé
+- **Notes**: Échelle 1-5 avec calcul moyennes automatique
+- **Statistiques**: Distribution notes, moyennes œuvres/artisans
+- **Modération**: Signalement avis inappropriés
+- **Mise à Jour**: Notes moyennes recalculées automatiquement
+
+### 🔔 SYSTÈME NOTIFICATIONS
+- **Types**: Vente, paiement, avis, validation, etc.
+- **Automatiques**: Déclenchées par événements système
+- **Gestion**: Lecture individuelle ou globale
+- **Statistiques**: Répartition par type et période
+- **Nettoyage**: Suppression automatique anciennes notifications
+
+### ❤️ SYSTÈME FAVORIS
+- **Validation**: Uniquement œuvres validées
+- **Statistiques**: Catégories préférées, prix moyen, artisans favoris
+- **Filtrage**: Par catégorie et favoris récents
+- **Synchronisation**: Nettoyage automatique œuvres invalidées
+- **Vérification**: Temps réel statut favori
+
+### 📋 PROCHAINE ÉTAPE (JOUR 7)
+- Tests API complets
+- Documentation API
+- Optimisation performance
+- Déploiement production
+
+---
+
 ## JOUR 5 - VALIDATION & TRANSACTIONS (66%)
 **Date**: 2026-02-18  
 **Développeur**: Backend 1  
