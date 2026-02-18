@@ -20,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \Laravel\Sanctum\Http\Middleware\EnsureTokenIsValid::class,
         ]);
         
         // Alias pour les middlewares personnalisés
