@@ -1,5 +1,81 @@
 # ArtisanConnect - Changelog
 
+## JOUR 3 - CATALOGUE PUBLIC (38%)
+**Date**: 2026-02-18  
+**Développeur**: Backend 1  
+**Tag**: v1.3.backend1
+
+### ✅ TÂCHES COMPLÉTÉES
+
+#### API Catalogue Publique
+- [x] CatalogController avec 6 méthodes complètes
+- [x] API Catégories hiérarchiques avec sous-catégories
+- [x] API Liste œuvres avec filtres avancés
+- [x] API Détail œuvre avec images et avis
+- [x] API Œuvres similaires
+- [x] API Statistiques catalogue
+
+#### Filtres Avancés
+- [x] Filtre par catégorie (avec sous-catégories optionnelles)
+- [x] Filtre par prix (min/max)
+- [x] Filtre par région de l'artisan
+- [x] Filtre par spécialité de l'artisan
+- [x] Recherche full-text (titre, description, matériaux)
+
+#### Tri & Pagination
+- [x] Tri multiple (recent, prix_asc, prix_desc, populaire)
+- [x] Pagination configurable (15 par défaut, max 50)
+- [x] Métadonnées de pagination complètes
+
+#### Routes API
+- [x] 5 routes publiques catalogue (/api/catalog/*)
+- [x] Routes authentifiées optimisées
+- [x] Documentation endpoints mise à jour
+
+### 📁 FICHIERS CRÉÉS/MODIFIÉS
+- `app/Http/Controllers/Api/CatalogController.php` - Controller catalogue complet
+- `routes/api.php` - Ajout routes catalogue publiques
+- `CHANGELOG.md` - Mise à jour JOUR 3
+
+### 🔧 API ENDPOINTS CATALOGUE
+**Catalogue Publique**:
+- `GET /api/catalog/categories` - Categories hiérarchiques
+- `GET /api/catalog/oeuvres` - Liste œuvres avec filtres
+- `GET /api/catalog/oeuvres/{id}` - Détail œuvre
+- `GET /api/catalog/oeuvres/{id}/similar` - Œuvres similaires
+- `GET /api/catalog/stats` - Statistiques globales
+
+**Paramètres Supportés**:
+- `categorie_id` - Filtrer par catégorie
+- `include_subcategories` - Inclure sous-catégories
+- `prix_min/prix_max` - Filtre par prix
+- `region` - Filtrer par région artisan
+- `specialite` - Filtrer par spécialité
+- `search` - Recherche full-text
+- `sort_by` - Tri (recent/prix_asc/prix_desc/populaire)
+- `per_page` - Pagination (15 défaut, max 50)
+
+### 🔍 FONCTIONNALITÉS RECHERCHE
+- **Full-text**: Titre, description, matériaux
+- **Filtres combinés**: Multi-critères possibles
+- **Recherche par région**: Localisation géographique
+- **Recherche par spécialité**: Expertise artisanale
+
+### 📊 STATISTIQUES INCLUSES
+- Total œuvres validées
+- Total catégories disponibles
+- Total artisans validés
+- Prix moyen et fourchettes
+- Top 10 catégories par nombre d'œuvres
+
+### 📋 PROCHAINE ÉTAPE (JOUR 4)
+- Espace Artisan complet
+- CRUD Œuvres avec validation
+- Dashboard Artisan avec statistiques
+- Upload et gestion images
+
+---
+
 ## JOUR 2 - AUTHENTIFICATION (25%)
 **Date**: 2026-02-18  
 **Développeur**: Backend 1  
@@ -151,7 +227,7 @@
 ## AVANCEMENT GLOBAL
 - **JOUR 1**: ✅ INFRASTRUCTURE (12%)
 - **JOUR 2**: ✅ AUTHENTIFICATION (25%)
-- **JOUR 3**: ⏳ CATALOGUE PUBLIC (38%)
+- **JOUR 3**: ✅ CATALOGUE PUBLIC (38%)
 - **JOUR 4**: ⏳ ESPACE ARTISAN (52%)
 - **JOUR 5**: ⏳ VALIDATION & TRANSACTIONS (66%)
 - **JOUR 6**: ⏳ PAIEMENT & SOCIAL (80%)

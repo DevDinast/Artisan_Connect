@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CatalogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,15 @@ use App\Http\Controllers\Api\AuthController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// Routes publiques du catalogue
+Route::prefix('catalog')->group(function () {
+    Route::get('categories', [CatalogController::class, 'categories']);
+    Route::get('oeuvres', [CatalogController::class, 'oeuvres']);
+    Route::get('oeuvres/{id}', [CatalogController::class, 'showOeuvre']);
+    Route::get('oeuvres/{id}/similar', [CatalogController::class, 'similarOeuvres']);
+    Route::get('stats', [CatalogController::class, 'stats']);
+});
 
 // Routes publiques d'authentification
 Route::prefix('auth')->group(function () {
@@ -28,7 +38,6 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('revoke-all', [AuthController::class, 'revokeAllTokens']);
     Route::get('profile', [AuthController::class, 'profile']);
     Route::put('profile', [AuthController::class, 'updateProfile']);
-    Route::post('change-password', [AuthController::class, 'changePassword']);
 });
 
 // Routes protégées par authentification et email vérifié
@@ -223,6 +232,13 @@ Route::get('info', function () {
         'message' => 'ArtisanConnect API v1.0',
         'version' => '1.0.0',
         'endpoints' => [
+            'catalog' => [
+                'GET /api/catalog/categories' => 'Liste des catégories',
+                'GET /api/catalog/oeuvres' => 'Liste des œuvres avec filtres',
+                'GET /api/catalog/oeuvres/{id}' => 'Détails d\'une œuvre',
+                'GET /api/catalog/oeuvres/{id}/similar' => 'Œuvres similaires',
+                'GET /api/catalog/stats' => 'Statistiques du catalogue',
+            ],
             'auth' => [
                 'POST /api/auth/register' => 'Inscription',
                 'POST /api/auth/login' => 'Connexion',
