@@ -1,5 +1,109 @@
 # ArtisanConnect - Changelog
 
+## JOUR 5 - VALIDATION & TRANSACTIONS (66%)
+**Date**: 2026-02-18  
+**Développeur**: Backend 1  
+**Tag**: v1.5.backend1
+
+### ✅ TÂCHES COMPLÉTÉES
+
+#### Validation Admin
+- [x] ValidationController avec 5 méthodes complètes
+- [x] ValidationService avec workflow validation
+- [x] API Œuvres en attente de validation
+- [x] API Valider/Refuser œuvres avec notifications
+- [x] Statistiques et historique validation
+- [x] Request classes validation robustes
+
+#### Panier & Commandes
+- [x] PanierController avec 6 méthodes complètes
+- [x] PanierService avec calcul commission 15%
+- [x] CommandeController avec 6 méthodes complètes
+- [x] CommandeService avec gestion workflow
+- [x] TransactionService avec calcul commission
+- [x] Request classes validation panier/commandes
+
+#### Transactions & Commission
+- [x] TransactionService avec calcul commission 15%
+- [x] Gestion multi-artisans par commande
+- [x] Mise à jour quantités disponibles
+- [x] Notifications automatiques artisans/acheteurs
+- [x] Statistiques transactions détaillées
+
+#### Routes API Complètes
+- [x] 5 routes validation admin (/api/admin/validation/*)
+- [x] 6 routes panier acheteur (/api/acheteur/panier/*)
+- [x] 6 routes commandes acheteur (/api/acheteur/commandes/*)
+- [x] Protection par rôle et authentification
+
+### 📁 FICHIERS CRÉÉS/MODIFIÉS
+- `app/Http/Controllers/Api/ValidationController.php` - Validation admin
+- `app/Services/ValidationService.php` - Logique validation
+- `app/Http/Controllers/Api/PanierController.php` - Gestion panier
+- `app/Services/PanierService.php` - Logique panier
+- `app/Http/Controllers/Api/CommandeController.php` - Gestion commandes
+- `app/Services/CommandeService.php` - Logique commandes
+- `app/Services/TransactionService.php` - Calcul commission 15%
+- `app/Http/Requests/Api/ValiderOeuvreRequest.php` - Validation admin
+- `app/Http/Requests/Api/RefuserOeuvreRequest.php` - Refus admin
+- `app/Http/Requests/Api/AjouterPanierRequest.php` - Ajout panier
+- `app/Http/Requests/Api/UpdatePanierRequest.php` - Mise à jour panier
+- `app/Http/Requests/Api/CreerCommandeRequest.php` - Création commande
+- `routes/api.php` - 17 nouvelles routes API
+
+### 🔧 API ENDPOINTS JOUR 5
+**Validation Admin**:
+- `GET /api/admin/oeuvres/en-attente` - Œuvres en attente
+- `PUT /api/admin/oeuvres/{id}/valider` - Valider œuvre
+- `PUT /api/admin/oeuvres/{id}/refuser` - Refuser œuvre
+- `GET /api/admin/validation/statistiques` - Stats validation
+- `GET /api/admin/validation/historique` - Historique validations
+
+**Panier Acheteur**:
+- `GET /api/acheteur/panier` - Contenu panier
+- `POST /api/acheteur/panier/ajouter` - Ajouter article
+- `PUT /api/acheteur/panier/{id}` - Mettre à jour quantité
+- `DELETE /api/acheteur/panier/{id}` - Supprimer article
+- `DELETE /api/acheteur/panier` - Vider panier
+- `GET /api/acheteur/panier/stats` - Statistiques panier
+
+**Commandes Acheteur**:
+- `GET /api/acheteur/commandes` - Liste commandes
+- `POST /api/acheteur/commandes` - Créer commande
+- `GET /api/acheteur/commandes/{id}` - Détail commande
+- `PUT /api/acheteur/commandes/{id}/annuler` - Annuler commande
+- `PUT /api/acheteur/commandes/{id}/confirmer-reception` - Confirmer réception
+- `GET /api/acheteur/commandes/{id}/transactions` - Transactions commande
+
+### 💰 SYSTÈME DE COMMISSION
+- **Taux Commission**: 15% fixe sur chaque vente
+- **Calcul Automatique**: Commission calculée par transaction
+- **Multi-Artisans**: Support commandes multi-artisans
+- **Répartition**: 85% artisan, 15% plateforme
+- **Notifications**: Alertes automatiques ventes/paiements
+
+### 🔄 WORKFLOW VALIDATION
+- **Soumission**: Artisan → En attente
+- **Validation**: Admin → Validée/Refusée
+- **Notifications**: Alertes automatiques artisans
+- **Historique**: Suivi complet validations
+- **Statistiques**: Tableau de bord validation
+
+### 📊 FONCTIONNALITÉS AVANCÉES
+- **Gestion Panier**: Ajout, modification, suppression articles
+- **Calcul Commission**: Automatique par transaction
+- **Gestion Stock**: Mise à jour automatique quantités
+- **Multi-Artisans**: Commandes avec plusieurs artisans
+- **Workflow Complet**: Panier → Commande → Transaction → Paiement
+
+### 📋 PROCHAINE ÉTAPE (JOUR 6)
+- Paiement Mobile Money
+- API Avis & Notations
+- API Notifications
+- API Favoris
+
+---
+
 ## JOUR 4 - ESPACE ARTISAN (52%)
 **Date**: 2026-02-18  
 **Développeur**: Backend 1  

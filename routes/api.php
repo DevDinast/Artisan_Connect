@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\ArtisanController;
 use App\Http\Controllers\Api\ImageController;
+use App\Http\Controllers\Api\ValidationController;
+use App\Http\Controllers\Api\PanierController;
+use App\Http\Controllers\Api\CommandeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -107,13 +110,29 @@ Route::middleware(['auth:sanctum', 'verified', 'role:acheteur'])->prefix('achete
             'message' => 'Dashboard Acheteur',
             'data' => [
                 'stats' => [
-                    'commandes_count' => 0,
-                    'favoris_count' => 0,
-                    'total_depense' => 0,
+                    'commandes_count' => 5,
+                    'favoris_count' => 12,
+                    'total_depense' => 250000,
                 ]
             ]
         ]);
     });
+    
+    // Routes du panier
+    Route::get('panier', [PanierController::class, 'getPanier']);
+    Route::post('panier/ajouter', [PanierController::class, 'ajouter']);
+    Route::put('panier/{id}', [PanierController::class, 'mettreAJour']);
+    Route::delete('panier/{id}', [PanierController::class, 'supprimer']);
+    Route::delete('panier', [PanierController::class, 'vider']);
+    Route::get('panier/stats', [PanierController::class, 'getStats']);
+    
+    // Routes des commandes
+    Route::get('commandes', [CommandeController::class, 'getCommandes']);
+    Route::post('commandes', [CommandeController::class, 'creerCommande']);
+    Route::get('commandes/{id}', [CommandeController::class, 'getDetailCommande']);
+    Route::put('commandes/{id}/annuler', [CommandeController::class, 'annulerCommande']);
+    Route::put('commandes/{id}/confirmer-reception', [CommandeController::class, 'confirmerReception']);
+    Route::get('commandes/{id}/transactions', [CommandeController::class, 'getTransactionsCommande']);
     
     Route::get('orders', function () {
         return response()->json([
@@ -140,20 +159,12 @@ Route::middleware(['auth:sanctum', 'verified', 'role:administrateur'])->prefix('
             'message' => 'Dashboard Administrateur',
             'data' => [
                 'stats' => [
-                    'users_count' => 0,
-                    'artisans_count' => 0,
-                    'oeuvres_count' => 0,
-                    'transactions_count' => 0,
+                    'total_utilisateurs' => 150,
+                    'total_artisans' => 45,
+                    'total_oeuvres' => 320,
+                    'total_ventes' => 89,
                 ]
             ]
-        ]);
-    });
-    
-    Route::get('users', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Liste des utilisateurs',
-            'data' => []
         ]);
     });
     
@@ -165,13 +176,20 @@ Route::middleware(['auth:sanctum', 'verified', 'role:administrateur'])->prefix('
         ]);
     });
     
-    Route::get('oeuvres/pending', function () {
+    Route::get('oeuvres', function () {
         return response()->json([
             'success' => true,
-            'message' => 'Œuvres en attente de validation',
+            'message' => 'Liste des œuvres',
             'data' => []
         ]);
     });
+    
+    // Routes de validation
+    Route::get('oeuvres/en-attente', [ValidationController::class, 'getOeuvresEnAttente']);
+    Route::put('oeuvres/{id}/valider', [ValidationController::class, 'validerOeuvre']);
+    Route::put('oeuvres/{id}/refuser', [ValidationController::class, 'refuserOeuvre']);
+    Route::get('validation/statistiques', [ValidationController::class, 'getStatistiquesValidation']);
+    Route::get('validation/historique', [ValidationController::class, 'getHistoriqueValidations']);
 });
 
 // Routes de test pour vérifier les middlewares
