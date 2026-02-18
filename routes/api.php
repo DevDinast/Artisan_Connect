@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\ArtisanController;
+use App\Http\Controllers\Api\ImageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,21 +83,20 @@ Route::middleware(['auth:sanctum', 'verified', 'role:artisan'])->prefix('artisan
 
 // Routes pour les artisans validés uniquement
 Route::middleware(['auth:sanctum', 'verified', 'validated.artisan'])->prefix('artisan')->group(function () {
-    Route::get('oeuvres', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Liste des œuvres (artisan validé)',
-            'data' => []
-        ]);
-    });
+    Route::get('oeuvres', [ArtisanController::class, 'mesOeuvres']);
+    Route::post('oeuvres', [ArtisanController::class, 'creerOeuvre']);
+    Route::get('oeuvres/{id}', [ArtisanController::class, 'detailOeuvre']);
+    Route::put('oeuvres/{id}', [ArtisanController::class, 'mettreAJourOeuvre']);
+    Route::delete('oeuvres/{id}', [ArtisanController::class, 'supprimerOeuvre']);
+    Route::post('oeuvres/{id}/soumettre', [ArtisanController::class, 'soumettreOeuvre']);
     
-    Route::post('oeuvres', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Création d\'œuvre (artisan validé)',
-            'data' => []
-        ]);
-    });
+    // Routes pour la gestion des images
+    Route::post('oeuvres/{id}/images', [ImageController::class, 'uploadImages']);
+    Route::delete('images/{imageId}', [ImageController::class, 'supprimerImage']);
+    Route::put('images/{imageId}/ordre', [ImageController::class, 'reorganiserImages']);
+    Route::put('images/{imageId}/principale', [ImageController::class, 'definirImagePrincipale']);
+    Route::get('images/{imageId}', [ImageController::class, 'getImageInfo']);
+    Route::post('images/{imageId}/optimiser', [ImageController::class, 'optimiserImage']);
 });
 
 // Routes pour les acheteurs

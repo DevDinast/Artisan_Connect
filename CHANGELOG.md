@@ -1,5 +1,82 @@
 # ArtisanConnect - Changelog
 
+## JOUR 4 - ESPACE ARTISAN (52%)
+**Date**: 2026-02-18  
+**Développeur**: Backend 1  
+**Tag**: v1.4.backend1
+
+### ✅ TÂCHES COMPLÉTÉES
+
+#### Services Métier
+- [x] OeuvreService avec logique métier complète
+- [x] ImageService avec traitement avancé des images
+- [x] Validation règles RG06, RG07, RG09 implémentées
+- [x] Gestion des workflows (brouillon → en_attente → validee)
+
+#### CRUD Œuvres Complet
+- [x] ArtisanController avec 8 méthodes complètes
+- [x] Création, mise à jour, suppression d'œuvres
+- [x] Soumission pour validation workflow
+- [x] Dashboard artisan avec statistiques avancées
+- [x] Gestion des images avec ordre et type
+
+#### Gestion Images Avancée
+- [x] ImageController avec 7 méthodes complètes
+- [x] Upload multiple avec validation
+- [x] Compression, redimensionnement, watermark
+- [x] Réorganisation ordre et définition principale
+- [x] Optimisation et suppression
+
+#### Validation & Sécurité
+- [x] Request classes validation (CreateOeuvreRequest, UpdateOeuvreRequest)
+- [x] Validation dimensions selon catégorie
+- [x] Règles prix minimum et formats
+- [x] Protection par rôle et validation artisan
+
+### 📁 FICHIERS CRÉÉS/MODIFIÉS
+- `app/Services/OeuvreService.php` - Logique métier complète
+- `app/Services/ImageService.php` - Service traitement images
+- `app/Http/Controllers/Api/ArtisanController.php` - CRUD œuvres artisan
+- `app/Http/Controllers/Api/ImageController.php` - Gestion images
+- `app/Http/Requests/Api/CreateOeuvreRequest.php` - Validation création
+- `app/Http/Requests/Api/UpdateOeuvreRequest.php` - Validation mise à jour
+- `routes/api.php` - 13 routes artisan complètes
+
+### 🔧 API ENDPOINTS ESPACE ARTISAN
+**CRUD Œuvres**:
+- `GET /api/artisan/oeuvres` - Liste œuvres artisan
+- `POST /api/artisan/oeuvres` - Créer œuvre
+- `GET /api/artisan/oeuvres/{id}` - Détail œuvre
+- `PUT /api/artisan/oeuvres/{id}` - Mettre à jour œuvre
+- `DELETE /api/artisan/oeuvres/{id}` - Supprimer œuvre
+- `POST /api/artisan/oeuvres/{id}/soumettre` - Soumettre validation
+
+**Gestion Images**:
+- `POST /api/artisan/oeuvres/{id}/images` - Upload images
+- `DELETE /api/artisan/images/{imageId}` - Supprimer image
+- `PUT /api/artisan/images/{imageId}/ordre` - Réorganiser ordre
+- `PUT /api/artisan/images/{imageId}/principale` - Définir principale
+- `GET /api/artisan/images/{imageId}` - Infos image
+- `POST /api/artisan/images/{imageId}/optimiser` - Optimiser image
+
+**Dashboard & Profil**:
+- `GET /api/artisan/dashboard` - Tableau de bord complet
+- `GET /api/artisan/profile` - Profil artisan étendu
+
+### 🖼️ FONCTIONNALITÉS AVANCÉES
+- **Workflow Validation**: Brouillon → En attente → Validée
+- **Traitement Images**: Compression, watermark, optimisation
+- **Gestion Multi-images**: Upload, ordre, type (principale/secondaire)
+- **Statistiques**: Ventes, revenus, moyennes, tendances
+- **Validation Métier**: Règles RG06, RG07, RG09
+
+### 📋 PROCHAINE ÉTAPE (JOUR 5)
+- Validation Admin (workflow validation)
+- API Panier + Commandes
+- Transactions et calcul commission
+
+---
+
 ## JOUR 3 - CATALOGUE PUBLIC (38%)
 **Date**: 2026-02-18  
 **Développeur**: Backend 1  
@@ -70,7 +147,7 @@
 
 ### 📋 PROCHAINE ÉTAPE (JOUR 4)
 - Espace Artisan complet
-- CRUD Œuvres avec validation
+- CRUD Œuvres avec validation workflow
 - Dashboard Artisan avec statistiques
 - Upload et gestion images
 
@@ -228,7 +305,7 @@
 - **JOUR 1**: ✅ INFRASTRUCTURE (12%)
 - **JOUR 2**: ✅ AUTHENTIFICATION (25%)
 - **JOUR 3**: ✅ CATALOGUE PUBLIC (38%)
-- **JOUR 4**: ⏳ ESPACE ARTISAN (52%)
+- **JOUR 4**: ✅ ESPACE ARTISAN (52%)
 - **JOUR 5**: ⏳ VALIDATION & TRANSACTIONS (66%)
 - **JOUR 6**: ⏳ PAIEMENT & SOCIAL (80%)
 - **JOUR 7**: ⏳ POLISH & DÉPLOIEMENT (88%)
