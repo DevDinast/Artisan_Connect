@@ -1,15 +1,4 @@
-.hero-section {
-    background-image: url('/images/image.jpg'); 
-    background-size: cover;
-    background-position: center;
-    height: 400px; 
-}
-.titre-special {
-    font-family: 'Lobster', cursive; /* police spéciale */
-    font-size: 60px; /* très grand */
-    text-align: center; /* centré */
-    color: #007bff; /* couleur bleue Bootstrap */
-}
+@import "tailwindcss";
 
-@import "bootstrap/dist/css/bootstrap.min.css";
+
 
