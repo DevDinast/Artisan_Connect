@@ -48,9 +48,15 @@ class Utilisateur extends Authenticatable
             'email_verifie_le' => 'datetime',
             'mot_de_passe' => 'hashed',
             'actif' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the password for the user.
+     */
+    public function getAuthPassword()
+    {
+        return $this->mot_de_passe;
     }
 
     /**

@@ -104,15 +104,15 @@ class AuthController extends Controller
         }
 
         try {
-            // Vérifier les identifiants
-            if (!Auth::attempt($request->only('email', 'mot_de_passe'))) {
+            // Vérifier les identifiants manuellement
+            $utilisateur = \App\Models\Utilisateur::where('email', $request->email)->first();
+            
+            if (!$utilisateur || !\Illuminate\Support\Facades\Hash::check($request->mot_de_passe, $utilisateur->mot_de_passe)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Identifiants incorrects'
                 ], 401);
             }
-
-            $utilisateur = Auth::user();
 
             // Vérifier si le compte est actif
             if (!$utilisateur->actif) {

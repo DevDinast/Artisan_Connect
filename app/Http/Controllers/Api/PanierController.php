@@ -24,7 +24,7 @@ class PanierController extends Controller
     public function ajouter(AjouterPanierRequest $request)
     {
         try {
-            $acheteur = $request->user()->acheteur;
+            $acheteur = $request->user()->loadMissing('acheteur')->acheteur;
             
             if (!$acheteur) {
                 return response()->json([
@@ -59,7 +59,7 @@ class PanierController extends Controller
     public function getPanier(Request $request)
     {
         try {
-            $acheteur = $request->user()->acheteur;
+            $acheteur = $request->user()->loadMissing('acheteur')->acheteur;
             
             if (!$acheteur) {
                 return response()->json([

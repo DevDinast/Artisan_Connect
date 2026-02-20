@@ -58,6 +58,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     
     // Routes pour tous les utilisateurs vérifiés
     Route::prefix('user')->group(function () {
+        Route::get('/', [AuthController::class, 'profile']);
+        Route::put('/', [AuthController::class, 'updateProfile']);
         Route::get('profile', [AuthController::class, 'profile']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
