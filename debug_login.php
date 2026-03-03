@@ -11,7 +11,7 @@ echo "========================\n\n";
 // Test login simple
 $loginData = [
     'email' => 'test@example.com',
-    'mot_de_passe' => 'password123'
+    'password' => 'password123'
 ];
 
 try {

@@ -218,7 +218,7 @@ CREATE TABLE `utilisateurs` (
   `nom` varchar(100) NOT NULL,
   `prenom` varchar(100) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `mot_de_passe` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `role` enum('artisan','acheteur','administrateur') NOT NULL,
   `telephone` varchar(20) DEFAULT NULL,
   `avatar` varchar(500) DEFAULT NULL,

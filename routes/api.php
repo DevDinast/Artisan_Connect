@@ -174,7 +174,11 @@ Route::middleware(['auth:sanctum', 'verified', 'role:acheteur'])->prefix('achete
     Route::get('favoris/stats', [FavoriController::class, 'getStatistiquesFavoris']);
     Route::get('favoris/categorie/{categorieId}', [FavoriController::class, 'getFavorisParCategorie']);
     Route::get('favoris/recents', [FavoriController::class, 'getFavorisRecents']);
-    
+      
+    Route::get('/register', [AuthController::class, 'showRegister']);
+     Route::post('/register', [AuthController::class, 'register']);
+ 
+ 
     Route::get('orders', function () {
         return response()->json([
             'success' => true,

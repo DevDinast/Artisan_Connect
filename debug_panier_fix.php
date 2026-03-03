@@ -11,7 +11,7 @@ echo "========================\n\n";
 // Obtenir un token
 $loginData = [
     'email' => 'test@example.com',
-    'mot_de_passe' => 'password123'
+    'password' => 'password123'
 ];
 
 $request = Illuminate\Http\Request::create('/api/auth/login', 'POST', [], [], [], [], json_encode($loginData));

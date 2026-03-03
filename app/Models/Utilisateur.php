@@ -23,7 +23,7 @@ class Utilisateur extends Authenticatable
         'nom',
         'prenom',
         'email',
-        'mot_de_passe',
+        'password',
         'role',
         'telephone',
         'avatar',
@@ -35,7 +35,7 @@ class Utilisateur extends Authenticatable
      * The attributes that should be hidden for serialization.
      */
     protected $hidden = [
-        'mot_de_passe',
+        'password',
         'remember_token',
     ];
 
@@ -46,7 +46,7 @@ class Utilisateur extends Authenticatable
     {
         return [
             'email_verifie_le' => 'datetime',
-            'mot_de_passe' => 'hashed',
+            'password' => 'hashed',
             'actif' => 'boolean',
         ];
     }
@@ -56,7 +56,7 @@ class Utilisateur extends Authenticatable
      */
     public function getAuthPassword()
     {
-        return $this->mot_de_passe;
+        return $this->password;
     }
 
     /**

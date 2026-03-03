@@ -21,7 +21,7 @@ class ChangePasswordRequest extends FormRequest
     {
         return [
             'mot_de_passe_actuel' => 'required|string',
-            'mot_de_passe' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
             'mot_de_passe_confirmation' => 'required|string|min:8',
         ];
     }
@@ -35,10 +35,10 @@ class ChangePasswordRequest extends FormRequest
             'mot_de_passe_actuel.required' => 'Le mot de passe actuel est obligatoire',
             'mot_de_passe_actuel.string' => 'Le mot de passe actuel doit être une chaîne de caractères',
             
-            'mot_de_passe.required' => 'Le nouveau mot de passe est obligatoire',
-            'mot_de_passe.string' => 'Le nouveau mot de passe doit être une chaîne de caractères',
-            'mot_de_passe.min' => 'Le nouveau mot de passe doit contenir au moins 8 caractères',
-            'mot_de_passe.confirmed' => 'La confirmation du mot de passe ne correspond pas',
+            'password.required' => 'Le nouveau mot de passe est obligatoire',
+            'password.string' => 'Le nouveau mot de passe doit être une chaîne de caractères',
+            'password.min' => 'Le nouveau mot de passe doit contenir au moins 8 caractères',
+            'password.confirmed' => 'La confirmation du mot de passe ne correspond pas',
             
             'mot_de_passe_confirmation.required' => 'La confirmation du mot de passe est obligatoire',
             'mot_de_passe_confirmation.string' => 'La confirmation du mot de passe doit être une chaîne de caractères',

@@ -13,7 +13,7 @@ $data = [
     'nom' => 'Test',
     'prenom' => 'Login',
     'email' => 'testlogin@example.com',
-    'mot_de_passe' => 'password123',
+    'password' => 'password123',
     'mot_de_passe_confirmation' => 'password123',
     'role' => 'acheteur'
 ];
@@ -30,7 +30,7 @@ echo "\n";
 // 2. Login
 $loginData = [
     'email' => $data['email'],
-    'mot_de_passe' => 'password123'
+    'password' => 'password123'
 ];
 
 $request = Illuminate\Http\Request::create('/api/auth/login', 'POST', [], [], [], [], json_encode($loginData));

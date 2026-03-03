@@ -13,7 +13,7 @@ $data = [
     'nom' => 'Test',
     'prenom' => 'User',
     'email' => 'test' . time() . '@example.com',
-    'mot_de_passe' => 'password123',
+    'password' => 'password123',
     'mot_de_passe_confirmation' => 'password123',
     'telephone' => '770000000',
     'role' => 'acheteur',
@@ -35,7 +35,7 @@ echo "\n";
 // Test 2: Login avec champs français
 $loginData = [
     'email' => $data['email'],
-    'mot_de_passe' => 'password123'
+    'password' => 'password123'
 ];
 
 $request = Illuminate\Http\Request::create('/api/auth/login', 'POST', [], [], [], [], json_encode($loginData));

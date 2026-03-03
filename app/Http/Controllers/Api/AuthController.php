@@ -21,7 +21,7 @@ class AuthController extends Controller
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
             'email' => 'required|string|email|max:255|unique:utilisateurs,email',
-            'mot_de_passe' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:artisan,acheteur,administrateur',
             'telephone' => 'nullable|string|max:20',
         ]);
@@ -39,7 +39,7 @@ class AuthController extends Controller
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'email' => $request->email,
-                'mot_de_passe' => Hash::make($request->mot_de_passe),
+                'password' => Hash::make($request->password),
                 'role' => $request->role,
                 'telephone' => $request->telephone,
                 'email_verifie_le' => now(), // Temporaire, à implémenter avec email verification
@@ -92,7 +92,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
-            'mot_de_passe' => 'required|string',
+            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -107,7 +107,7 @@ class AuthController extends Controller
             // Vérifier les identifiants manuellement
             $utilisateur = \App\Models\Utilisateur::where('email', $request->email)->first();
             
-            if (!$utilisateur || !\Illuminate\Support\Facades\Hash::check($request->mot_de_passe, $utilisateur->mot_de_passe)) {
+            if (!$utilisateur || !\Illuminate\Support\Facades\Hash::check($request->password, $utilisateur->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Identifiants incorrects'
@@ -300,7 +300,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'mot_de_passe_actuel' => 'required|string',
-            'mot_de_passe' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -315,7 +315,7 @@ class AuthController extends Controller
             $utilisateur = $request->user();
 
             // Vérifier l'ancien mot de passe
-            if (!Hash::check($request->mot_de_passe_actuel, $utilisateur->mot_de_passe)) {
+            if (!Hash::check($request->mot_de_passe_actuel, $utilisateur->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Mot de passe actuel incorrect'
@@ -324,7 +324,7 @@ class AuthController extends Controller
 
             // Mettre à jour le mot de passe
             $utilisateur->update([
-                'mot_de_passe' => Hash::make($request->mot_de_passe)
+                'password' => Hash::make($request->password)
             ]);
 
             // Révoquer tous les tokens sauf l'actuel
