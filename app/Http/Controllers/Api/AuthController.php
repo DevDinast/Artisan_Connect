@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -122,5 +123,30 @@ class AuthController extends Controller
      return response()->json([
         'message'=>'Deconnexion réussie',
      ],200);
+    }
+
+    public function profil(Request $request)
+    {
+        $user=$request->user();
+        switch ($user->role) {
+                case 'administrateur':
+                    $user->load('administrateur');
+                break;
+
+                case 'artisan':
+                    $user->load('artisan');
+                break;
+
+
+                case 'acheteur':
+                  $user->load('acheteur');
+                break;
+        }
+
+        return response()->json([
+           'message'=>'vous etes connecter',
+           'user'=>$user,
+
+        ]);
     }
 }
