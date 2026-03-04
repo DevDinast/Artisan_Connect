@@ -12,20 +12,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [
-            \App\Http\Middleware\CheckRole::class,
-            \App\Http\Middleware\VerifiedEmail::class,
-            \App\Http\Middleware\ValidatedArtisan::class,
-        ]);
-        
+
+        // Middleware Sanctum pour les requêtes API stateful (SPA)
         $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
-        
-        // Alias pour les middlewares personnalisés
+
+        // Alias des middlewares personnalisés (utilisés à la demande dans les routes)
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
-            'verified' => \App\Http\Middleware\VerifiedEmail::class,
+            'role'              => \App\Http\Middleware\CheckRole::class,
+            'email.verified'    => \App\Http\Middleware\VerifiedEmail::class,
             'validated.artisan' => \App\Http\Middleware\ValidatedArtisan::class,
         ]);
     })
