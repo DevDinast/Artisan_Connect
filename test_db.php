@@ -29,7 +29,7 @@ if ($users->count() === 0) {
         'nom' => 'Test',
         'prenom' => 'User',
         'email' => 'testuser@example.com',
-        'mot_de_passe' => Hash::make('password123'),
+        'password' => Hash::make('password123'),
         'role' => 'acheteur',
         'telephone' => '770000000',
         'email_verifie_le' => now(),

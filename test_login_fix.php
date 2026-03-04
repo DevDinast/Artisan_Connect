@@ -5,34 +5,29 @@ require_once __DIR__ . '/vendor/autoload.php';
 $app = require_once __DIR__ . '/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
-echo "🔐 TESTS D'AUTHENTIFICATION (CORRIGÉ)\n";
-echo "===================================\n\n";
+echo "🔧 TEST CORRECTION LOGIN\n";
+echo "=======================\n\n";
 
-// Test 1: Register avec champs français
+// Créer un utilisateur de test
 $data = [
     'nom' => 'Test',
-    'prenom' => 'User',
-    'email' => 'test' . time() . '@example.com',
+    'prenom' => 'Login',
+    'email' => 'testlogin@example.com',
     'password' => 'password123',
     'mot_de_passe_confirmation' => 'password123',
-    'telephone' => '770000000',
-    'role' => 'acheteur',
-    'date_naissance' => '1990-01-01'
+    'role' => 'acheteur'
 ];
 
+// 1. Register
 $request = Illuminate\Http\Request::create('/api/auth/register', 'POST', [], [], [], [], json_encode($data));
 $request->headers->set('Content-Type', 'application/json');
 $response = $kernel->handle($request);
 echo "1. Register: " . $response->getStatusCode() . " - ";
 $result = json_decode($response->getContent());
 echo ($result->success ?? false) ? "✅" : "❌";
-if ($result->success ?? false) {
-    $token = $result->data->token ?? null;
-    echo " (Token: " . substr($token, 0, 20) . "...)";
-}
 echo "\n";
 
-// Test 2: Login avec champs français
+// 2. Login
 $loginData = [
     'email' => $data['email'],
     'password' => 'password123'
@@ -45,37 +40,33 @@ echo "2. Login: " . $response->getStatusCode() . " - ";
 $result = json_decode($response->getContent());
 echo ($result->success ?? false) ? "✅" : "❌";
 if ($result->success ?? false) {
-    $token = $result->data->token ?? $token;
-    echo " (Token: " . substr($token, 0, 20) . "...)";
+    $token = $result->data->token ?? null;
+    echo " (Token OK)";
+} else {
+    echo " (Erreur: " . ($result->message ?? 'Unknown') . ")";
 }
 echo "\n";
 
-// Test 3: Profile (avec token)
+// 3. Test route /api/user
 if ($token) {
-    $request = Illuminate\Http\Request::create('/api/auth/profile', 'GET');
+    $request = Illuminate\Http\Request::create('/api/user', 'GET');
     $request->headers->set('Authorization', 'Bearer ' . $token);
     $response = $kernel->handle($request);
-    echo "3. Profile: " . $response->getStatusCode() . " - ";
+    echo "3. GET /api/user: " . $response->getStatusCode() . " - ";
     $result = json_decode($response->getContent());
     echo ($result->success ?? false) ? "✅" : "❌";
     echo "\n";
-} else {
-    echo "3. Profile: ❌ (Pas de token)\n";
-}
-
-// Test 4: Logout (avec token)
-if ($token) {
-    $request = Illuminate\Http\Request::create('/api/auth/logout', 'POST');
+    
+    // 4. Test PUT /api/user
+    $updateData = ['nom' => 'Updated'];
+    $request = Illuminate\Http\Request::create('/api/user', 'PUT', [], [], [], [], json_encode($updateData));
     $request->headers->set('Authorization', 'Bearer ' . $token);
+    $request->headers->set('Content-Type', 'application/json');
     $response = $kernel->handle($request);
-    echo "4. Logout: " . $response->getStatusCode() . " - ";
+    echo "4. PUT /api/user: " . $response->getStatusCode() . " - ";
     $result = json_decode($response->getContent());
     echo ($result->success ?? false) ? "✅" : "❌";
     echo "\n";
-} else {
-    echo "4. Logout: ❌ (Pas de token)\n";
 }
 
-echo "\n🎉 Tests d'authentification terminés !\n";
-echo "📊 Résultats: Authentification Sanctum fonctionnelle\n";
-echo "🔐 Tokens générés et validés avec succès !\n";
+echo "\n🎉 Tests de correction terminés !\n";

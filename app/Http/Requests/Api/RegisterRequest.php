@@ -23,7 +23,7 @@ class RegisterRequest extends FormRequest
             'nom' => 'required|string|max:100',
             'prenom' => 'required|string|max:100',
             'email' => 'required|string|email|max:255|unique:utilisateurs,email',
-            'mot_de_passe' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
             'mot_de_passe_confirmation' => 'required|string|min:8',
             'role' => 'required|in:artisan,acheteur,administrateur',
             'telephone' => 'nullable|string|max:20',
@@ -50,10 +50,10 @@ class RegisterRequest extends FormRequest
             'email.max' => 'L\'email ne doit pas dépasser 255 caractères',
             'email.unique' => 'Cet email est déjà utilisé',
             
-            'mot_de_passe.required' => 'Le mot de passe est obligatoire',
-            'mot_de_passe.string' => 'Le mot de passe doit être une chaîne de caractères',
-            'mot_de_passe.min' => 'Le mot de passe doit contenir au moins 8 caractères',
-            'mot_de_passe.confirmed' => 'La confirmation du mot de passe ne correspond pas',
+            'password.required' => 'Le mot de passe est obligatoire',
+            'password.string' => 'Le mot de passe doit être une chaîne de caractères',
+            'password.min' => 'Le mot de passe doit contenir au moins 8 caractères',
+            'password.confirmed' => 'La confirmation du mot de passe ne correspond pas',
             
             'mot_de_passe_confirmation.required' => 'La confirmation du mot de passe est obligatoire',
             'mot_de_passe_confirmation.string' => 'La confirmation du mot de passe doit être une chaîne de caractères',

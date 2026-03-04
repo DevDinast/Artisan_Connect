@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Artisan;
 use App\Models\Acheteur;
@@ -16,32 +16,32 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:20',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:artisan,acheteur',
-            'telephone' => 'nullable|string|max:15',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'actif' => 'required|boolean',
-        ]);
-
         try {
+
+            $data = $request->validate([
+                'name' => 'required|string|max:20',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|string|min:8|confirmed',
+                'role' => 'required|in:artisan,acheteur',
+                'telephone' => 'nullable|string|max:15',
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'actif' => 'required|boolean',
+            ]);
 
             DB::beginTransaction();
 
-            // ✅ CORRECTION 1 : gestion avatar AVANT création
+            // Gestion avatar
             if ($request->hasFile('avatar')) {
                 $data['avatar'] = $request->file('avatar')
                     ->store('avatars', 'public');
             }
 
-            // ✅ CORRECTION 2 : PAS de Hash::make()
-            // Le password est hashé automatiquement via cast dans User model
+            // Création utilisateur
             $user = User::create($data);
 
             // Création profil selon rôle
             switch ($user->role) {
+
                 case 'administrateur':
                     Administrateur::create([
                         'user_id' => $user->id,
@@ -62,9 +62,10 @@ class AuthController extends Controller
                     break;
             }
 
+            // Envoi mail de vérification
             $user->sendEmailVerificationNotification();
 
-            // ✅ CORRECTION 3 : createToken fonctionne normalement
+            // Création token Sanctum
             $token = $user->createToken('authToken')->plainTextToken;
 
             DB::commit();
@@ -80,33 +81,29 @@ class AuthController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'error' => 'une erreur estsurvenue,veuillez réesseyez',
+                'error' => 'Une erreur est survenue, veuillez réessayer',
             ], 500);
         }
     }
 
     public function login(Request $request)
     {
-        // ✅ CORRECTION 4 : validation propre (pas de unique, pas de confirmed)
         $data = $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        // Tentative d’authentification
         if (!Auth::attempt($data)) {
             return response()->json([
                 'error' => 'Email ou mot de passe incorrect'
             ], 401);
         }
 
-        // ✅ CORRECTION 5 : récupération propre du modèle User
         $user = User::find(Auth::id());
 
-        // ✅ CORRECTION 6 : suppression via relation ()
+        // Supprimer anciens tokens
         $user->tokens()->delete();
 
-        // Nouveau token
         $token = $user->createToken('authToken')->plainTextToken;
 
         return response()->json([
@@ -116,37 +113,37 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function logout(Request $request )
+    public function logout(Request $request)
     {
+        $request->user()->currentAccessToken()->delete();
 
-     $request->user()->currentAccessToken()->delete();
-     return response()->json([
-        'message'=>'Deconnexion réussie',
-     ],200);
+        return response()->json([
+            'message' => 'Déconnexion réussie',
+        ], 200);
     }
 
     public function profil(Request $request)
     {
-        $user=$request->user();
+        $user = $request->user();
+
         switch ($user->role) {
-                case 'administrateur':
-                    $user->load('administrateur');
+
+            case 'administrateur':
+                $user->load('administrateur');
                 break;
 
-                case 'artisan':
-                    $user->load('artisan');
+            case 'artisan':
+                $user->load('artisan');
                 break;
 
-
-                case 'acheteur':
-                  $user->load('acheteur');
+            case 'acheteur':
+                $user->load('acheteur');
                 break;
         }
 
         return response()->json([
-           'message'=>'vous etes connecter',
-           'user'=>$user,
-
-        ]);
+            'message' => 'Utilisateur connecté',
+            'user' => $user,
+        ], 200);
     }
 }
