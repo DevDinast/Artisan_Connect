@@ -12,13 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-
-        // Middleware Sanctum pour les requêtes API stateful (SPA)
         $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
-
-        // Alias des middlewares personnalisés (utilisés à la demande dans les routes)
         $middleware->alias([
             'role'              => \App\Http\Middleware\CheckRole::class,
             'email.verified'    => \App\Http\Middleware\VerifiedEmail::class,
@@ -26,5 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Non authentifié'], 401);
+            }
+            return redirect()->route('login');
+        });
     })->create();
