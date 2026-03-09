@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('favoris', function (Blueprint $table) {
-            $table->enum('type', ['panier', 'favori'])->default('favori')->after('oeuvre_id');
-            $table->integer('quantite')->default(1)->after('type');
+        Schema::create('panier_items', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
 
@@ -22,8 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('favoris', function (Blueprint $table) {
-            $table->dropColumn(['type', 'quantite']);
-        });
+        Schema::dropIfExists('panier_items');
     }
 };

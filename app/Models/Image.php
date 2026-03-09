@@ -14,35 +14,17 @@ class Image extends Model
     protected $fillable = [
         'oeuvre_id',
         'chemin',
-        'type',
-        'ordre',
+        'is_principale',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'ordre' => 'integer',
-            'created_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'is_principale' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     public function oeuvre()
     {
         return $this->belongsTo(Oeuvre::class, 'oeuvre_id');
-    }
-
-    public function scopePrincipale($query)
-    {
-        return $query->where('type', 'principale');
-    }
-
-    public function scopeSecondaire($query)
-    {
-        return $query->where('type', 'secondaire');
-    }
-
-    public function scopeByOrder($query)
-    {
-        return $query->orderBy('ordre', 'asc');
     }
 }

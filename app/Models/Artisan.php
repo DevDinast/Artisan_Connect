@@ -18,7 +18,7 @@ class Artisan extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'utilisateur_id',
+        'user_id',
         'biographie',
         'specialite',
         'region',
@@ -43,7 +43,7 @@ class Artisan extends Model
      */
     public function utilisateur()
     {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
+        return $this->belongsTo(User::class, 'User_id');
     }
 
     /**

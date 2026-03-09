@@ -32,8 +32,6 @@ class CheckRole
         return response()->json([
             'success' => false,
             'message' => 'Accès non autorisé',
-            'required_roles' => $roles,
-            'user_role' => $user->role
         ], 403);
     }
 

@@ -18,7 +18,7 @@ class Administrateur extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'utilisateur_id',
+        'user_id',
         'niveau_acces',
     ];
 
@@ -38,7 +38,7 @@ class Administrateur extends Model
      */
     public function utilisateur()
     {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**

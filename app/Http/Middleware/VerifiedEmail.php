@@ -15,14 +15,8 @@ class VerifiedEmail
     {
         $user = Auth::user();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Non authentifié'
-            ], 401);
-        }
 
-        if (!$user->email_verifie_le) {
+        if (!$user->email_verified_at) {
             return response()->json([
                 'success' => false,
                 'message' => 'Email non vérifié',
