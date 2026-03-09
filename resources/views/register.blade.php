@@ -12,10 +12,13 @@
         <option value="client">Client</option>
     </select>
 
-    <input type="text" id="name" placeholder="Nom complet" required>
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Mot de passe" required>
-    <input type="password" id="password_confirmation" placeholder="Confirmer mot de passe" required>
+    <input type="string" id="nom" placeholder="Nom " required>
+    <input type="string" id="prenom" placeholder="Prénom " required>
+    <input type="string" id="email" placeholder="Email" required>
+    <input type="string" id="password" placeholder="Mot de passe" required>
+    <input type="string" id="mot_de_passe_confirmation" placeholder="Confirmer mot de passe" required>
+    <input type="string" id="telephone" placeholder="Téléphone" required>
+
 
     <button type="submit">S’inscrire</button>
 </form>

@@ -3,16 +3,6 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CatalogController;
-use App\Http\Controllers\Api\ArtisanController;
-use App\Http\Controllers\Api\ImageController;
-use App\Http\Controllers\Api\ValidationController;
-use App\Http\Controllers\Api\PanierController;
-use App\Http\Controllers\Api\CommandeController;
-use App\Http\Controllers\Api\PaiementController;
-use App\Http\Controllers\Api\AvisController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\FavoriController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,19 +14,6 @@ use App\Http\Controllers\Api\FavoriController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
-// Routes publiques pour le catalogue
-Route::prefix('catalog')->group(function () {
-    Route::get('categories', [CatalogController::class, 'categories']);
-    Route::get('oeuvres', [CatalogController::class, 'oeuvres']);
-    Route::get('oeuvres/{id}', [CatalogController::class, 'showOeuvre']);
-    Route::get('oeuvres/{id}/similar', [CatalogController::class, 'similarOeuvres']);
-    Route::get('stats', [CatalogController::class, 'stats']);
-    
-    // Routes publiques pour les avis
-    Route::get('oeuvres/{id}/avis', [AvisController::class, 'getAvisOeuvre']);
-    Route::get('artisans/{id}/avis/stats', [AvisController::class, 'getStatistiquesAvisArtisan']);
-});
 
 // Routes publiques d'authentification
 Route::prefix('auth')->group(function () {
@@ -51,6 +28,7 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('revoke-all', [AuthController::class, 'revokeAllTokens']);
     Route::get('profile', [AuthController::class, 'profile']);
     Route::put('profile', [AuthController::class, 'updateProfile']);
+    Route::post('change-password', [AuthController::class, 'changePassword']);
 });
 
 // Routes protégées par authentification et email vérifié
@@ -58,8 +36,6 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     
     // Routes pour tous les utilisateurs vérifiés
     Route::prefix('user')->group(function () {
-        Route::get('/', [AuthController::class, 'profile']);
-        Route::put('/', [AuthController::class, 'updateProfile']);
         Route::get('profile', [AuthController::class, 'profile']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
@@ -96,20 +72,21 @@ Route::middleware(['auth:sanctum', 'verified', 'role:artisan'])->prefix('artisan
 
 // Routes pour les artisans validés uniquement
 Route::middleware(['auth:sanctum', 'verified', 'validated.artisan'])->prefix('artisan')->group(function () {
-    Route::get('oeuvres', [ArtisanController::class, 'mesOeuvres']);
-    Route::post('oeuvres', [ArtisanController::class, 'creerOeuvre']);
-    Route::get('oeuvres/{id}', [ArtisanController::class, 'detailOeuvre']);
-    Route::put('oeuvres/{id}', [ArtisanController::class, 'mettreAJourOeuvre']);
-    Route::delete('oeuvres/{id}', [ArtisanController::class, 'supprimerOeuvre']);
-    Route::post('oeuvres/{id}/soumettre', [ArtisanController::class, 'soumettreOeuvre']);
+    Route::get('oeuvres', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Liste des œuvres (artisan validé)',
+            'data' => []
+        ]);
+    });
     
-    // Routes pour la gestion des images
-    Route::post('oeuvres/{id}/images', [ImageController::class, 'uploadImages']);
-    Route::delete('images/{imageId}', [ImageController::class, 'supprimerImage']);
-    Route::put('images/{imageId}/ordre', [ImageController::class, 'reorganiserImages']);
-    Route::put('images/{imageId}/principale', [ImageController::class, 'definirImagePrincipale']);
-    Route::get('images/{imageId}', [ImageController::class, 'getImageInfo']);
-    Route::post('images/{imageId}/optimiser', [ImageController::class, 'optimiserImage']);
+    Route::post('oeuvres', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Création d\'œuvre (artisan validé)',
+            'data' => []
+        ]);
+    });
 });
 
 // Routes pour les acheteurs
@@ -120,65 +97,14 @@ Route::middleware(['auth:sanctum', 'verified', 'role:acheteur'])->prefix('achete
             'message' => 'Dashboard Acheteur',
             'data' => [
                 'stats' => [
-                    'commandes_count' => 5,
-                    'favoris_count' => 12,
-                    'total_depense' => 250000,
+                    'commandes_count' => 0,
+                    'favoris_count' => 0,
+                    'total_depense' => 0,
                 ]
             ]
         ]);
     });
     
-    // Routes du panier
-    Route::get('panier', [PanierController::class, 'getPanier']);
-    Route::post('panier/ajouter', [PanierController::class, 'ajouter']);
-    Route::put('panier/{id}', [PanierController::class, 'mettreAJour']);
-    Route::delete('panier/{id}', [PanierController::class, 'supprimer']);
-    Route::delete('panier', [PanierController::class, 'vider']);
-    Route::get('panier/stats', [PanierController::class, 'getStats']);
-    
-    // Routes des commandes
-    Route::get('commandes', [CommandeController::class, 'getCommandes']);
-    Route::post('commandes', [CommandeController::class, 'creerCommande']);
-    Route::get('commandes/{id}', [CommandeController::class, 'getDetailCommande']);
-    Route::put('commandes/{id}/annuler', [CommandeController::class, 'annulerCommande']);
-    Route::put('commandes/{id}/confirmer-reception', [CommandeController::class, 'confirmerReception']);
-    Route::get('commandes/{id}/transactions', [CommandeController::class, 'getTransactionsCommande']);
-    
-    // Routes des paiements
-    Route::post('paiement/initier', [PaiementController::class, 'initierPaiement']);
-    Route::get('paiement/{id}/statut', [PaiementController::class, 'getStatutPaiement']);
-    Route::put('paiement/{id}/annuler', [PaiementController::class, 'annulerPaiement']);
-    Route::get('paiement/historique', [PaiementController::class, 'getHistoriquePaiements']);
-    Route::get('paiement/methodes', [PaiementController::class, 'getMethodesPaiement']);
-    
-    // Routes des avis
-    Route::post('avis', [AvisController::class, 'creerAvis']);
-    Route::get('mes-avis', [AvisController::class, 'getMesAvis']);
-    Route::put('avis/{id}', [AvisController::class, 'mettreAJourAvis']);
-    Route::delete('avis/{id}', [AvisController::class, 'supprimerAvis']);
-    Route::post('avis/{id}/signaler', [AvisController::class, 'signalerAvis']);
-    
-    // Routes des notifications
-    Route::get('notifications', [NotificationController::class, 'getNotifications']);
-    Route::get('notifications/non-lues', [NotificationController::class, 'getNotificationsNonLues']);
-    Route::put('notifications/{id}/lire', [NotificationController::class, 'marquerCommeLue']);
-    Route::put('notifications/tout-lire', [NotificationController::class, 'marquerToutesCommeLues']);
-    Route::delete('notifications/{id}', [NotificationController::class, 'supprimerNotification']);
-    Route::get('notifications/stats', [NotificationController::class, 'getStatistiquesNotifications']);
-    
-    // Routes des favoris
-    Route::post('favoris', [FavoriController::class, 'ajouterFavori']);
-    Route::get('favoris', [FavoriController::class, 'getFavoris']);
-    Route::delete('favoris/{id}', [FavoriController::class, 'supprimerFavori']);
-    Route::get('favoris/{oeuvreId}/verifier', [FavoriController::class, 'verifierFavori']);
-    Route::get('favoris/stats', [FavoriController::class, 'getStatistiquesFavoris']);
-    Route::get('favoris/categorie/{categorieId}', [FavoriController::class, 'getFavorisParCategorie']);
-    Route::get('favoris/recents', [FavoriController::class, 'getFavorisRecents']);
-      
-    Route::get('/register', [AuthController::class, 'showRegister']);
-     Route::post('/register', [AuthController::class, 'register']);
- 
- 
     Route::get('orders', function () {
         return response()->json([
             'success' => true,
@@ -204,12 +130,20 @@ Route::middleware(['auth:sanctum', 'verified', 'role:administrateur'])->prefix('
             'message' => 'Dashboard Administrateur',
             'data' => [
                 'stats' => [
-                    'total_utilisateurs' => 150,
-                    'total_artisans' => 45,
-                    'total_oeuvres' => 320,
-                    'total_ventes' => 89,
+                    'users_count' => 0,
+                    'artisans_count' => 0,
+                    'oeuvres_count' => 0,
+                    'transactions_count' => 0,
                 ]
             ]
+        ]);
+    });
+    
+    Route::get('users', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Liste des utilisateurs',
+            'data' => []
         ]);
     });
     
@@ -221,20 +155,13 @@ Route::middleware(['auth:sanctum', 'verified', 'role:administrateur'])->prefix('
         ]);
     });
     
-    Route::get('oeuvres', function () {
+    Route::get('oeuvres/pending', function () {
         return response()->json([
             'success' => true,
-            'message' => 'Liste des œuvres',
+            'message' => 'Œuvres en attente de validation',
             'data' => []
         ]);
     });
-    
-    // Routes de validation
-    Route::get('oeuvres/en-attente', [ValidationController::class, 'getOeuvresEnAttente']);
-    Route::put('oeuvres/{id}/valider', [ValidationController::class, 'validerOeuvre']);
-    Route::put('oeuvres/{id}/refuser', [ValidationController::class, 'refuserOeuvre']);
-    Route::get('validation/statistiques', [ValidationController::class, 'getStatistiquesValidation']);
-    Route::get('validation/historique', [ValidationController::class, 'getHistoriqueValidations']);
 });
 
 // Routes de test pour vérifier les middlewares
@@ -296,13 +223,6 @@ Route::get('info', function () {
         'message' => 'ArtisanConnect API v1.0',
         'version' => '1.0.0',
         'endpoints' => [
-            'catalog' => [
-                'GET /api/catalog/categories' => 'Liste des catégories',
-                'GET /api/catalog/oeuvres' => 'Liste des œuvres avec filtres',
-                'GET /api/catalog/oeuvres/{id}' => 'Détails d\'une œuvre',
-                'GET /api/catalog/oeuvres/{id}/similar' => 'Œuvres similaires',
-                'GET /api/catalog/stats' => 'Statistiques du catalogue',
-            ],
             'auth' => [
                 'POST /api/auth/register' => 'Inscription',
                 'POST /api/auth/login' => 'Connexion',
