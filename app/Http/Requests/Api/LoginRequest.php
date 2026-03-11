@@ -21,7 +21,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => 'required|string|email',
-            'mot_de_passe' => 'required|string',
+            'password' => 'required|string',
         ];
     }
 
@@ -35,8 +35,8 @@ class LoginRequest extends FormRequest
             'email.string' => 'L\'email doit être une chaîne de caractères',
             'email.email' => 'L\'email doit être une adresse email valide',
             
-            'mot_de_passe.required' => 'Le mot de passe est obligatoire',
-            'mot_de_passe.string' => 'Le mot de passe doit être une chaîne de caractères',
+            'password.required' => 'Le mot de passe est obligatoire',
+            'password.string' => 'Le mot de passe doit être une chaîne de caractères',
         ];
     }
 }

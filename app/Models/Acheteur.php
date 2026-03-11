@@ -18,7 +18,7 @@ class Acheteur extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'utilisateur_id',
+        'user_id',
         'adresse_livraison',
     ];
 
@@ -39,7 +39,7 @@ class Acheteur extends Model
      */
     public function utilisateur()
     {
-        return $this->belongsTo(User::class, 'utilisateur_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**

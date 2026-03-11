@@ -15,112 +15,104 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:20',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:artisan,acheteur',
-            'telephone' => 'nullable|string|max:15',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'actif' => 'required|boolean',
-        ]);
-
         try {
+            $data = $request->validate([
+                'name'      => 'required|string|max:20',
+                'email'     => 'required|email|unique:users,email',
+                'password'  => 'required|string|min:8|confirmed',
+                'role'      => 'required|in:artisan,acheteur',
+                'telephone' => 'nullable|string|max:15',
+                'avatar'    => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
 
             DB::beginTransaction();
 
-            // ✅ CORRECTION 1 : gestion avatar AVANT création
             if ($request->hasFile('avatar')) {
-                $data['avatar'] = $request->file('avatar')
-                    ->store('avatars', 'public');
+                $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
             }
 
-            // ✅ CORRECTION 2 : PAS de Hash::make()
-            // Le password est hashé automatiquement via cast dans User model
+            $data['actif'] = true;
+
             $user = User::create($data);
 
-            // Création profil selon rôle
             switch ($user->role) {
-                case 'administrateur':
-                    Administrateur::create([
-                        'user_id' => $user->id,
-                    ]);
-                    break;
-
                 case 'artisan':
-                    Artisan::create([
-                        'user_id' => $user->id,
-                        'compte_valide' => false,
-                    ]);
+                    Artisan::create(['user_id' => $user->id, 'compte_valide' => false]);
                     break;
-
                 case 'acheteur':
-                    Acheteur::create([
-                        'user_id' => $user->id,
-                    ]);
+                    Acheteur::create(['user_id' => $user->id]);
                     break;
             }
 
-            $user->sendEmailVerificationNotification();
-
-            // ✅ CORRECTION 3 : createToken fonctionne normalement
+            // Connexion session ET token
+            Auth::login($user);
             $token = $user->createToken('authToken')->plainTextToken;
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Utilisateur créé avec succès',
-                'user' => $user,
-                'token' => $token,
+                'user'    => $user,
+                'token'   => $token,
             ], 201);
 
-        } catch (\Exception $e) {
-
-            DB::rollBack();
-
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'error' => 'une erreur estsurvenue,veuillez réesseyez',
+                'message' => 'Erreur de validation',
+                'errors'  => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error'  => 'Une erreur est survenue',
+                'detail' => $e->getMessage(),
             ], 500);
         }
     }
 
     public function login(Request $request)
     {
-        // ✅ CORRECTION 4 : validation propre (pas de unique, pas de confirmed)
         $data = $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required|string',
         ]);
 
-        // Tentative d’authentification
-        if (!Auth::attempt($data)) {
+        if (!Auth::attempt($data, true)) {
             return response()->json([
                 'error' => 'Email ou mot de passe incorrect'
             ], 401);
         }
 
-        // ✅ CORRECTION 5 : récupération propre du modèle User
         $user = User::find(Auth::id());
-
-        // ✅ CORRECTION 6 : suppression via relation ()
         $user->tokens()->delete();
-
-        // Nouveau token
         $token = $user->createToken('authToken')->plainTextToken;
 
         return response()->json([
             'message' => 'Connexion réussie',
-            'user' => $user,
-            'token' => $token,
+            'user'    => $user,
+            'token'   => $token,
         ], 200);
     }
 
-    public function logout(Request $request )
+    public function logout(Request $request)
     {
+        Auth::logout();
+        $request->user()?->currentAccessToken()?->delete();
 
-     $request->user()->currentAccessToken()->delete();
-     return response()->json([
-        'message'=>'Deconnexion réussie',
-     ],200);
+        return response()->json([
+            'message' => 'Déconnexion réussie',
+        ], 200);
+    }
+
+    public function profil(Request $request)
+    {
+        $user = $request->user();
+        $user->load($user->role);
+
+        return response()->json([
+            'message' => 'Utilisateur connecté',
+            'user'    => $user,
+        ], 200);
     }
 }
