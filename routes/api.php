@@ -13,20 +13,22 @@ use App\Http\Controllers\Api\AvisController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\FavoriController;
 use App\Http\Controllers\Api\PaiementController;
-
+use Illuminate\Support\Facades\Route;
 
 
 
 
 Route::prefix('v1')->group(function () {
 
-    // -----------------------
-    // AUTH (Public API)
-    // -----------------------
-    Route::prefix('auth')->group(function () {
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login', [AuthController::class, 'login']);
-    });
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/me', [AuthController::class,'profile']);
+
+    Route::put('/me', [AuthController::class,'updateProfile']);
+
+    Route::post('/me/avatar', [AuthController::class,'uploadAvatar']);
+
+});
 
     // -----------------------
     // AUTH (Protégé API)
