@@ -4,300 +4,137 @@ namespace App\Services;
 
 use App\Models\Transaction;
 use App\Models\Oeuvre;
+use App\Models\Artisan;
+use App\Models\Acheteur;
+use App\Models\Panier;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
 
 class TransactionService
 {
-    private const COMMISSION_RATE = 0.15; // 15%
-
     /**
-     * Créer des transactions pour une commande
+     * Calculer les montants d'une transaction
+     * RG19 : commission 15% standard, 10% pour artisans certifiés
+     * RG20 : certifié = 50 ventes ET note > 4/5
      */
-    public function creerTransactions($commandeId, $articles)
+    public function calculerMontants(Oeuvre $oeuvre, int $quantite): array
     {
-        try {
-            $transactions = [];
-            $totalCommission = 0;
+        $montantTotal = $oeuvre->prix * $quantite;
 
-            DB::beginTransaction();
+        // RG20 : vérifier si l'artisan est certifié
+        $artisan     = $oeuvre->artisan;
+        $estCertifie = $artisan->nb_ventes >= 50 && $artisan->note_moyenne > 4;
 
-            foreach ($articles as $article) {
-                $oeuvre = $article->oeuvre;
-                $quantite = $article->quantite;
-                $prixUnitaire = $oeuvre->prix;
-                $sousTotal = $quantite * $prixUnitaire;
-                $commission = $sousTotal * self::COMMISSION_RATE;
-                $montantArtisan = $sousTotal - $commission;
+        // RG19 : taux de commission selon certification
+        $taux       = $estCertifie ? 0.10 : 0.15;
+        $commission = round($montantTotal * $taux, 2);
+        $montantArtisan = round($montantTotal - $commission, 2);
 
-                // Mettre à jour la quantité disponible
-                $oeuvre->decrement('quantite_disponible', $quantite);
-
-                // Créer la transaction
-                $transaction = Transaction::create([
-                    'commande_id' => $commandeId,
-                    'acheteur_id' => $article->acheteur_id,
-                    'oeuvre_id' => $oeuvre->id,
-                    'artisan_id' => $oeuvre->artisan_id,
-                    'quantite' => $quantite,
-                    'prix_unitaire' => $prixUnitaire,
-                    'montant_total' => $sousTotal,
-                    'commission' => $commission,
-                    'montant_artisan' => $montantArtisan,
-                    'statut' => 'en_attente',
-                ]);
-
-                $transactions[] = $transaction;
-                $totalCommission += $commission;
-
-                // Notifier l'artisan
-                $this->notifierArtisan($oeuvre->artisan_id, 'vente', 'Nouvelle vente', $oeuvre->titre, $quantite, $montantArtisan);
-            }
-
-            DB::commit();
-
-            return [
-                'success' => true,
-                'transactions' => $transactions,
-                'total_commission' => $totalCommission,
-                'message' => count($transactions) . ' transaction(s) créée(s) avec succès'
-            ];
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la création des transactions',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Mettre à jour le statut d'une transaction
-     */
-    public function mettreAJourStatut($transactionId, $statut, $motif = null)
-    {
-        try {
-            $transaction = Transaction::findOrFail($transactionId);
-
-            $statutsAutorises = ['en_attente', 'payee', 'annulee', 'remboursee'];
-            if (!in_array($statut, $statutsAutorises)) {
-                return [
-                    'success' => false,
-                    'message' => 'Statut non autorisé',
-                    'statuts_autorises' => $statutsAutorises
-                ];
-            }
-
-            $transaction->update([
-                'statut' => $statut,
-                'date_paiement' => $statut === 'payee' ? now() : null,
-                'motif_annulation' => $motif,
-            ]);
-
-            // Notifier selon le statut
-            if ($statut === 'payee') {
-                $this->notifierArtisan($transaction->artisan_id, 'paiement', 'Paiement reçu', $transaction->oeuvre->titre, $transaction->montant_artisan);
-                $this->notifierAcheteur($transaction->acheteur_id, 'paiement', 'Paiement confirmé', $transaction->oeuvre->titre);
-            } elseif ($statut === 'annulee') {
-                // Remettre la quantité en stock
-                $transaction->oeuvre->increment('quantite_disponible', $transaction->quantite);
-                $this->notifierArtisan($transaction->artisan_id, 'annulation', 'Commande annulée', $transaction->oeuvre->titre);
-            }
-
-            return [
-                'success' => true,
-                'message' => 'Statut de transaction mis à jour avec succès',
-                'data' => $transaction->fresh()
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Transaction non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour du statut',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtenir les transactions d'une commande
-     */
-    public function getTransactionsCommande($commandeId, $acheteurId)
-    {
-        try {
-            $transactions = Transaction::with([
-                'oeuvre' => function ($q) {
-                    $q->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
-                        $img->principale()->byOrder();
-                    }]);
-                }
-            ])
-            ->where('commande_id', $commandeId)
-            ->where('acheteur_id', $acheteurId)
-            ->get();
-
-            if ($transactions->isEmpty()) {
-                return [
-                    'success' => false,
-                    'message' => 'Aucune transaction trouvée pour cette commande'
-                ];
-            }
-
-            // Calculer les totaux
-            $totalCommande = $transactions->sum('montant_total');
-            $totalCommission = $transactions->sum('commission');
-            $totalArtisans = $transactions->sum('montant_artisan');
-
-            return [
-                'success' => true,
-                'data' => $transactions,
-                'stats' => [
-                    'total_commande' => $totalCommande,
-                    'total_commission' => $totalCommission,
-                    'total_artisans' => $totalArtisans,
-                    'nombre_transactions' => $transactions->count(),
-                    'taux_commission' => self::COMMISSION_RATE * 100 . '%'
-                ]
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des transactions',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtenir les statistiques des transactions
-     */
-    public function getStatistiquesTransactions($artisanId = null)
-    {
-        try {
-            $query = Transaction::query();
-            
-            if ($artisanId) {
-                $query->where('artisan_id', $artisanId);
-            }
-
-            $stats = [
-                'total_transactions' => $query->count(),
-                'total_ventes' => $query->where('statut', 'payee')->count(),
-                'total_en_attente' => $query->where('statut', 'en_attente')->count(),
-                'total_annulees' => $query->where('statut', 'annulee')->count(),
-                'montant_total_ventes' => $query->where('statut', 'payee')->sum('montant_total'),
-                'total_commission_generee' => $query->where('statut', 'payee')->sum('commission'),
-                'revenus_artisans' => $query->where('statut', 'payee')->sum('montant_artisan'),
-                'moyenne_par_transaction' => $query->where('statut', 'payee')->avg('montant_total'),
-                'ventes_ce_mois' => $query->where('statut', 'payee')->whereMonth('created_at', now()->month)->count(),
-            ];
-
-            return [
-                'success' => true,
-                'data' => $stats
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des statistiques',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtenir les transactions d'un artisan
-     */
-    public function getTransactionsArtisan($artisanId)
-    {
-        try {
-            $transactions = Transaction::with([
-                'acheteur.utilisateur:id,nom,prenom,email',
-                'oeuvre' => function ($q) {
-                    $q->with(['images' => function ($img) {
-                        $img->principale()->byOrder();
-                    }]);
-                }
-            ])
-            ->where('artisan_id', $artisanId)
-            ->latest()
-            ->paginate(20);
-
-            return [
-                'success' => true,
-                'data' => $transactions->items(),
-                'pagination' => [
-                    'current_page' => $transactions->currentPage(),
-                    'per_page' => $transactions->perPage(),
-                    'total' => $transactions->total(),
-                    'last_page' => $transactions->lastPage(),
-                ]
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des transactions',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Calculer la commission pour un montant
-     */
-    public function calculerCommission($montant)
-    {
         return [
-            'montant' => $montant,
-            'commission' => $montant * self::COMMISSION_RATE,
-            'montant_net' => $montant - ($montant * self::COMMISSION_RATE),
-            'taux_commission' => self::COMMISSION_RATE * 100 . '%'
+            'montant_total'         => $montantTotal,
+            'commission_plateforme' => $commission,
+            'montant_artisan'       => $montantArtisan,
+            'taux_commission'       => $taux,
+            'artisan_certifie'      => $estCertifie,
         ];
     }
 
     /**
-     * Notifier un artisan
+     * Créer une commande depuis le panier ou directement
      */
-    private function notifierArtisan($artisanId, $type, $titre, $message, $details = null)
+    public function creerCommande(Acheteur $acheteur, Oeuvre $oeuvre, array $data): array
     {
+        $quantite = $data['quantite'] ?? 1;
+
+        // Vérifier le stock
+        if ($oeuvre->stock < $quantite) {
+            return ['success' => false, 'message' => 'Stock insuffisant.'];
+        }
+
+        DB::beginTransaction();
         try {
-            Notification::create([
-                'utilisateur_id' => $artisanId,
-                'type' => $type,
-                'titre' => $titre,
-                'message' => $message,
-                'lue' => false,
+            $montants = $this->calculerMontants($oeuvre, $quantite);
+
+            $transaction = Transaction::create([
+                'acheteur_id'           => $acheteur->id,
+                'oeuvre_id'             => $oeuvre->id,
+                'montant_total'         => $montants['montant_total'],
+                'commission_plateforme' => $montants['commission_plateforme'],
+                'montant_artisan'       => $montants['montant_artisan'],
+                'statut'                => 'en_attente',
+                'mode_paiement'         => $data['mode_paiement'],
+                'adresse_livraison'     => json_encode($data['adresse_livraison']),
+                'frais_livraison'       => $data['frais_livraison'] ?? 0,
             ]);
+
+            // RG17 : décrémentation stock
+            $oeuvre->decrement('stock', $quantite);
+
+            // RG18 : statut épuisée si stock = 0
+            if ($oeuvre->fresh()->stock <= 0) {
+                $oeuvre->update(['statut' => 'epuisee']);
+            }
+
+            // Vider le panier pour cette œuvre
+            Panier::where('acheteur_id', $acheteur->id)
+                  ->where('oeuvre_id', $oeuvre->id)
+                  ->delete();
+
+            DB::commit();
+
+            return ['success' => true, 'transaction' => $transaction];
+
         } catch (\Exception $e) {
-            // Erreur silencieuse pour la notification
+            DB::rollBack();
+            return ['success' => false, 'message' => 'Erreur lors de la création de la commande.'];
         }
     }
 
     /**
-     * Notifier un acheteur
+     * Workflow post-paiement confirmé (appelé depuis webhook Mobile Money)
+     * RG17 : stock déjà décrémenté à la commande
      */
-    private function notifierAcheteur($acheteurId, $type, $titre, $message)
+    public function confirmerPaiement(Transaction $transaction, string $reference): array
     {
+        DB::beginTransaction();
         try {
-            Notification::create([
-                'utilisateur_id' => $acheteurId,
-                'type' => $type,
-                'titre' => $titre,
-                'message' => $message,
-                'lue' => false,
+            $transaction->update([
+                'statut'              => 'payee',
+                'reference_paiement'  => $reference,
+                'date_paiement'       => now(),
             ]);
+
+            $oeuvre  = $transaction->oeuvre;
+            $artisan = $oeuvre->artisan;
+
+            // Incrémenter les ventes de l'artisan
+            $artisan->increment('nb_ventes');
+
+            // Notifier l'artisan
+            Notification::create([
+                'user_id' => $artisan->user_id,
+                'type'    => 'paiement_recu',
+                'titre'   => 'Paiement reçu !',
+                'message' => "Paiement confirmé pour \"{$oeuvre->titre}\". Montant : {$transaction->montant_artisan} FCFA.",
+                'lue'     => false,
+            ]);
+
+            // Notifier l'acheteur
+            Notification::create([
+                'user_id' => $transaction->acheteur->user_id,
+                'type'    => 'commande_confirmee',
+                'titre'   => 'Commande confirmée !',
+                'message' => "Votre commande pour \"{$oeuvre->titre}\" a été confirmée.",
+                'lue'     => false,
+            ]);
+
+            DB::commit();
+
+            return ['success' => true, 'transaction' => $transaction->fresh()];
+
         } catch (\Exception $e) {
-            // Erreur silencieuse pour la notification
+            DB::rollBack();
+            return ['success' => false, 'message' => 'Erreur lors de la confirmation du paiement.'];
         }
     }
 }

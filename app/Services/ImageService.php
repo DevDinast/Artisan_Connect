@@ -3,365 +3,140 @@
 namespace App\Services;
 
 use App\Models\Image;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Oeuvre;
 use Illuminate\Http\UploadedFile;
-use Intervention\Image\Facades\Image as ImageProcessor;
+use Illuminate\Support\Facades\Storage;
 
 class ImageService
 {
+    // Dimensions max après resize
+    const MAX_WIDTH  = 1200;
+    const MAX_HEIGHT = 1200;
+
     /**
-     * Traiter et stocker une image
+     * Traiter et uploader une image pour une œuvre
+     * RG07 : 3 à 10 images par œuvre
+     * RG08 : JPG/PNG max 5Mo
      */
-    public function traiterImage(UploadedFile $file, int $oeuvreId, int $ordre = 0, string $type = 'secondaire')
+    public function uploadPourOeuvre(Oeuvre $oeuvre, array $fichiers): array
     {
-        try {
-            // Validation du fichier
-            $this->validerImageFile($file);
+        $nbExistantes = $oeuvre->images()->count();
+        $nbNouvelles  = count($fichiers);
 
-            // Traitement de l'image
-            $processedImage = $this->traiterImageProcessor($file);
+        // RG07 : vérifier la limite de 10 images
+        if ($nbExistantes + $nbNouvelles > 10) {
+            return [
+                'success' => false,
+                'message' => "Limite de 10 images atteinte. Vous avez déjà {$nbExistantes} image(s).",
+            ];
+        }
 
-            // Stockage
-            $chemin = $this->stockerImage($processedImage, $file);
+        $imagesCreees = [];
 
-            // Enregistrement en base de données
+        foreach ($fichiers as $fichier) {
+            $chemin = $this->traiterEtStocker($fichier, $oeuvre->id);
+
+            // La première image devient principale s'il n'y en a pas encore
+            $isPrincipale = ($nbExistantes === 0 && empty($imagesCreees));
+
             $image = Image::create([
-                'oeuvre_id' => $oeuvreId,
-                'chemin' => $chemin,
-                'type' => $type,
-                'ordre' => $ordre,
+                'oeuvre_id'     => $oeuvre->id,
+                'chemin'        => $chemin,
+                'is_principale' => $isPrincipale,
             ]);
 
-            return [
-                'success' => true,
-                'image' => $image,
-                'url' => Storage::url($chemin)
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors du traitement de l\'image: ' . $e->getMessage()
-            ];
+            $imagesCreees[] = $image;
+            $nbExistantes++;
         }
+
+        return ['success' => true, 'images' => $imagesCreees];
     }
 
     /**
-     * Traiter plusieurs images
+     * Traiter une image : resize + compression + watermark
+     * Utilise GD (natif PHP) si Intervention Image n'est pas installé
      */
-    public function traiterMultipleImages(array $files, int $oeuvreId)
+    private function traiterEtStocker(UploadedFile $fichier, int $oeuvreId): string
     {
-        $results = [];
-        $images = [];
+        $dossier  = "oeuvres/{$oeuvreId}";
+        $nomFichier = uniqid() . '.' . $fichier->getClientOriginalExtension();
 
-        foreach ($files as $index => $file) {
-            if ($file instanceof UploadedFile) {
-                $type = $index === 0 ? 'principale' : 'secondaire';
-                $result = $this->traiterImage($file, $oeuvreId, $index, $type);
-                
-                if ($result['success']) {
-                    $images[] = $result['image'];
-                }
-                
-                $results[] = $result;
-            }
+        // Si Intervention Image est installé, utiliser pour traitement avancé
+        if (class_exists('\Intervention\Image\Facades\Image')) {
+            return $this->traiterAvecIntervention($fichier, $dossier, $nomFichier);
         }
 
-        return [
-            'success' => !empty($images),
-            'images' => $images,
-            'results' => $results
-        ];
+        // Sinon stockage direct (resize basique avec GD)
+        $chemin = $fichier->storeAs($dossier, $nomFichier, 'public');
+        return $chemin;
     }
 
     /**
-     * Supprimer une image
+     * Traitement avec Intervention Image (compression + resize + watermark)
      */
-    public function supprimerImage($imageId, $artisanId)
+    private function traiterAvecIntervention(UploadedFile $fichier, string $dossier, string $nomFichier): string
     {
-        try {
-            $image = Image::with('oeuvre')->findOrFail($imageId);
+        $image = \Intervention\Image\Facades\Image::make($fichier);
 
-            // Vérifier que l'image appartient à l'artisan
-            if ($image->oeuvre->artisan_id !== $artisanId) {
-                return [
-                    'success' => false,
-                    'message' => 'Cette image ne vous appartient pas'
-                ];
-            }
+        // Resize en gardant les proportions
+        $image->resize(self::MAX_WIDTH, self::MAX_HEIGHT, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize(); // ne pas agrandir si plus petit
+        });
 
-            // Supprimer le fichier
-            if (Storage::disk('public')->exists($image->chemin)) {
-                Storage::disk('public')->delete($image->chemin);
-            }
+        // Compression qualité 85%
+        $cheminComplet = storage_path("app/public/{$dossier}/{$nomFichier}");
 
-            // Supprimer l'enregistrement
-            $image->delete();
-
-            return [
-                'success' => true,
-                'message' => 'Image supprimée avec succès'
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Image non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la suppression de l\'image: ' . $e->getMessage()
-            ];
+        // Créer le dossier si nécessaire
+        if (!file_exists(dirname($cheminComplet))) {
+            mkdir(dirname($cheminComplet), 0755, true);
         }
+
+        $image->save($cheminComplet, 85);
+
+        return "{$dossier}/{$nomFichier}";
     }
 
     /**
-     * Réorganiser l'ordre des images
+     * Supprimer une image avec son fichier
+     * RG07 : vérifier qu'il restera au moins 3 images
      */
-    public function reorganiserImages(array $ordreImages, int $oeuvreId, $artisanId)
+    public function supprimer(Image $image): array
     {
-        try {
-            foreach ($ordreImages as $position => $imageId) {
-                $image = Image::with('oeuvre')->findOrFail($imageId);
+        $oeuvre   = $image->oeuvre;
+        $nbImages = $oeuvre->images()->count();
 
-                // Vérifier que l'image appartient à l'artisan
-                if ($image->oeuvre->artisan_id !== $artisanId) {
-                    return [
-                        'success' => false,
-                        'message' => 'Une des images ne vous appartient pas'
-                    ];
-                }
-
-                $image->update(['ordre' => $position]);
-            }
-
-            return [
-                'success' => true,
-                'message' => 'Ordre des images mis à jour avec succès'
-            ];
-
-        } catch (\Exception $e) {
+        // Vérifier la limite min seulement si l'œuvre est soumise/validée
+        if (in_array($oeuvre->statut, ['en_attente', 'validee']) && $nbImages <= 3) {
             return [
                 'success' => false,
-                'message' => 'Erreur lors de la réorganisation des images: ' . $e->getMessage()
+                'message' => 'Impossible de supprimer : minimum 3 images requises.',
             ];
         }
+
+        // Si c'était l'image principale, promouvoir la suivante
+        if ($image->is_principale) {
+            $prochaine = $oeuvre->images()->where('id', '!=', $image->id)->first();
+            if ($prochaine) {
+                $prochaine->update(['is_principale' => true]);
+            }
+        }
+
+        Storage::disk('public')->delete($image->chemin);
+        $image->delete();
+
+        return ['success' => true, 'message' => 'Image supprimée.'];
     }
 
     /**
      * Définir une image comme principale
      */
-    public function definirImagePrincipale($imageId, $artisanId)
+    public function definirPrincipale(Image $image): void
     {
-        try {
-            $image = Image::with('oeuvre')->findOrFail($imageId);
+        // Retirer le flag principal de toutes les images de l'œuvre
+        Image::where('oeuvre_id', $image->oeuvre_id)->update(['is_principale' => false]);
 
-            // Vérifier que l'image appartient à l'artisan
-            if ($image->oeuvre->artisan_id !== $artisanId) {
-                return [
-                    'success' => false,
-                    'message' => 'Cette image ne vous appartient pas'
-                ];
-            }
-
-            // Mettre toutes les autres images en secondaire
-            Image::where('oeuvre_id', $image->oeuvre->id)
-                ->where('id', '!=', $imageId)
-                ->update(['type' => 'secondaire']);
-
-            // Mettre l'image sélectionnée en principale
-            $image->update(['type' => 'principale']);
-
-            return [
-                'success' => true,
-                'message' => 'Image principale définie avec succès'
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Image non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la définition de l\'image principale: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Traiter l'image avec ImageProcessor
-     */
-    private function traiterImageProcessor(UploadedFile $file)
-    {
-        $image = ImageProcessor::make($file);
-
-        // Redimensionnement optimisé
-        $image->resize(1200, 1200, function ($constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        });
-
-        // Compression et qualité
-        $image->encode('jpg', 85);
-
-        // Watermark si configuré
-        if (config('artisan.watermark.enabled', false)) {
-            $this->ajouterWatermark($image);
-        }
-
-        // Optimisation supplémentaire
-        $image->sharpen(5);
-
-        return $image;
-    }
-
-    /**
-     * Ajouter un watermark
-     */
-    private function ajouterWatermark($image)
-    {
-        $watermarkText = config('artisan.watermark.text', 'ArtisanConnect');
-        $watermarkSize = config('artisan.watermark.size', 16);
-        $watermarkOpacity = config('artisan.watermark.opacity', 50);
-
-        $image->text($watermarkText, function ($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size($watermarkSize);
-            $font->color('#ffffff');
-            $font->align('center', 'bottom');
-        })->opacity($watermarkOpacity);
-    }
-
-    /**
-     * Stocker l'image
-     */
-    private function stockerImage($processedImage, UploadedFile $originalFile)
-    {
-        $fileName = time() . '_' . uniqid() . '.jpg';
-        $directory = 'oeuvres/' . date('Y/m/d');
-        
-        $path = $processedImage->store($directory, 'public', [
-            'disk' => 'public',
-            'filename' => $fileName
-        ]);
-
-        return $path;
-    }
-
-    /**
-     * Valider un fichier image
-     */
-    private function validerImageFile(UploadedFile $file)
-    {
-        $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        $maxSize = 5 * 1024 * 1024; // 5MB
-
-        if (!in_array($file->getMimeType(), $allowedMimes)) {
-            throw new \Exception('Format d\'image non autorisé. Formats acceptés: JPG, PNG, WebP');
-        }
-
-        if ($file->getSize() > $maxSize) {
-            throw new \Exception('L\'image ne doit pas dépasser 5MB');
-        }
-
-        if ($file->getSize() < 100 * 1024) { // Minimum 100KB
-            throw new \Exception('L\'image doit faire au moins 100KB');
-        }
-    }
-
-    /**
-     * Obtenir les informations d'une image
-     */
-    public function getImageInfo($imageId, $artisanId)
-    {
-        try {
-            $image = Image::with('oeuvre')->findOrFail($imageId);
-
-            // Vérifier que l'image appartient à l'artisan
-            if ($image->oeuvre->artisan_id !== $artisanId) {
-                return [
-                    'success' => false,
-                    'message' => 'Cette image ne vous appartient pas'
-                ];
-            }
-
-            return [
-                'success' => true,
-                'data' => $image,
-                'url' => Storage::url($image->chemin),
-                'is_principal' => $image->type === 'principale'
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Image non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des informations de l\'image: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Optimiser une image existante
-     */
-    public function optimiserImage($imageId, $artisanId)
-    {
-        try {
-            $image = Image::with('oeuvre')->findOrFail($imageId);
-
-            // Vérifier que l'image appartient à l'artisan
-            if ($image->oeuvre->artisan_id !== $artisanId) {
-                return [
-                    'success' => false,
-                    'message' => 'Cette image ne vous appartient pas'
-                ];
-            }
-
-            // Vérifier que le fichier existe
-            if (!Storage::disk('public')->exists($image->chemin)) {
-                return [
-                    'success' => false,
-                    'message' => 'Fichier image non trouvé'
-                ];
-            }
-
-            // Retraiter l'image
-            $imagePath = Storage::disk('public')->path($image->chemin);
-            $processedImage = ImageProcessor::make($imagePath);
-            
-            // Optimisation plus agressive
-            $processedImage->resize(1200, 1200, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
-            $processedImage->encode('jpg', 75); // Qualité réduite pour optimisation
-            $processedImage->sharpen(3);
-
-            // Remplacer le fichier
-            $processedImage->save($imagePath);
-
-            return [
-                'success' => true,
-                'message' => 'Image optimisée avec succès'
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Image non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de l\'optimisation de l\'image: ' . $e->getMessage()
-            ];
-        }
+        // Définir la nouvelle principale
+        $image->update(['is_principale' => true]);
     }
 }

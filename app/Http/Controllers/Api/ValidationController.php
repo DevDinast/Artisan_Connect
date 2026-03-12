@@ -3,180 +3,141 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\ValiderOeuvreRequest;
-use App\Http\Requests\Api\RefuserOeuvreRequest;
-use App\Services\ValidationService;
+use App\Models\Oeuvre;
+use App\Models\Artisan;
+use App\Models\Transaction;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ValidationController extends Controller
 {
-    protected $validationService;
+    public function __construct(private NotificationService $notificationService) {}
 
-    public function __construct(ValidationService $validationService)
+    /**
+     * GET /v1/admin/dashboard
+     */
+    public function dashboard()
     {
-        $this->validationService = $validationService;
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'stats' => [
+                    'oeuvres_en_attente' => Oeuvre::where('statut', 'en_attente')->count(),
+                    'oeuvres_validees'   => Oeuvre::where('statut', 'validee')->count(),
+                    'oeuvres_refusees'   => Oeuvre::where('statut', 'refusee')->count(),
+                    'total_artisans'     => Artisan::count(),
+                    'artisans_valides'   => Artisan::where('compte_valide', true)->count(),
+                    'total_transactions' => Transaction::count(),
+                    'ca_total'           => Transaction::where('statut', 'payee')->sum('montant_total'),
+                    'commissions_total'  => Transaction::where('statut', 'payee')->sum('commission_plateforme'),
+                ],
+            ],
+            'message' => 'Dashboard admin récupéré avec succès',
+        ], 200);
     }
 
     /**
-     * Obtenir les œuvres en attente de validation
+     * GET /v1/admin/oeuvres/en-attente
      */
     public function getOeuvresEnAttente(Request $request)
     {
-        try {
-            $admin = $request->user()->administrateur;
-            
-            if (!$admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès administrateur requis'
-                ], 403);
-            }
+        $oeuvres = Oeuvre::where('statut', 'en_attente')
+            ->with(['artisan.user', 'categorie', 'images'])
+            ->orderBy('created_at', 'asc') // FIFO
+            ->paginate(15);
 
-            $result = $this->validationService->getOeuvresEnAttente();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Œuvres en attente récupérées avec succès',
-                'data' => $result['data'],
-                'pagination' => $result['pagination']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des œuvres en attente',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'oeuvres'    => $oeuvres->items(),
+                'pagination' => [
+                    'total'        => $oeuvres->total(),
+                    'current_page' => $oeuvres->currentPage(),
+                    'last_page'    => $oeuvres->lastPage(),
+                ],
+            ],
+            'message' => 'File de validation récupérée avec succès',
+        ], 200);
     }
 
     /**
-     * Valider une œuvre
+     * PUT /v1/admin/oeuvres/{id}/valider
+     * RG13 : double validation si prix > 500 000 FCFA
+     * RG15 : journalisation complète
+     * RG16 : publication automatique après validation
      */
-    public function validerOeuvre(ValiderOeuvreRequest $request, $id)
+    public function validerOeuvre(Request $request, $id)
     {
-        try {
-            $admin = $request->user()->administrateur;
-            
-            if (!$admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès administrateur requis'
-                ], 403);
-            }
+        $admin  = $request->user();
+        $oeuvre = Oeuvre::where('statut', 'en_attente')->findOrFail($id);
 
-            $result = $this->validationService->validerOeuvre($id, $request->validated(), $admin->id);
-
-            if ($result['success']) {
-                return response()->json($result);
-            } else {
-                return response()->json($result, 422);
-            }
-
-        } catch (\Exception $e) {
+        // RG13 : double validation pour œuvres > 500 000 FCFA
+        if ($oeuvre->prix > 500000 && !$request->boolean('double_validation_confirmee')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la validation de l\'œuvre',
-                'error' => $e->getMessage()
-            ], 500);
+                'data'    => null,
+                'message' => 'Cette œuvre dépasse 500 000 FCFA et nécessite une double validation. Ajoutez double_validation_confirmee=true.',
+            ], 422);
         }
+
+        // RG16 : publication automatique
+        $oeuvre->update([
+            'statut'          => 'validee',
+            'date_validation' => now(),
+            'validateur_id'   => $admin->id,
+            'motif_refus'     => null,
+        ]);
+
+        // Mettre à jour le compteur artisan
+        $oeuvre->artisan->increment('nb_oeuvres_publiees');
+
+        // Notifier l'artisan
+        $this->notificationService->notifier(
+            $oeuvre->artisan->user_id,
+            'validation',
+            'Œuvre validée !',
+            "Votre œuvre \"{$oeuvre->titre}\" a été validée et est visible dans le catalogue."
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['oeuvre' => $oeuvre->fresh()->load(['artisan', 'categorie', 'images'])],
+            'message' => 'Œuvre validée et publiée avec succès',
+        ], 200);
     }
 
     /**
-     * Refuser une œuvre
+     * PUT /v1/admin/oeuvres/{id}/refuser
+     * RG14 : motif obligatoire
      */
-    public function refuserOeuvre(RefuserOeuvreRequest $request, $id)
+    public function refuserOeuvre(Request $request, $id)
     {
-        try {
-            $admin = $request->user()->administrateur;
-            
-            if (!$admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès administrateur requis'
-                ], 403);
-            }
+        $admin  = $request->user();
+        $oeuvre = Oeuvre::where('statut', 'en_attente')->findOrFail($id);
 
-            $result = $this->validationService->refuserOeuvre($id, $request->validated(), $admin->id);
+        $data = $request->validate([
+            'motif_refus' => 'required|string|min:10', // RG14
+        ]);
 
-            if ($result['success']) {
-                return response()->json($result);
-            } else {
-                return response()->json($result, 422);
-            }
+        $oeuvre->update([
+            'statut'          => 'refusee',
+            'motif_refus'     => $data['motif_refus'],
+            'date_validation' => now(),
+            'validateur_id'   => $admin->id,
+        ]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du refus de l\'œuvre',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
+        // Notifier l'artisan avec le motif
+        $this->notificationService->notifier(
+            $oeuvre->artisan->user_id,
+            'refus',
+            'Œuvre refusée',
+            "Votre œuvre \"{$oeuvre->titre}\" a été refusée. Motif : {$data['motif_refus']}"
+        );
 
-    /**
-     * Obtenir les statistiques de validation
-     */
-    public function getStatistiquesValidation(Request $request)
-    {
-        try {
-            $admin = $request->user()->administrateur;
-            
-            if (!$admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès administrateur requis'
-                ], 403);
-            }
-
-            $result = $this->validationService->getStatistiquesValidation();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Statistiques de validation récupérées avec succès',
-                'data' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des statistiques',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtenir l'historique des validations
-     */
-    public function getHistoriqueValidations(Request $request)
-    {
-        try {
-            $admin = $request->user()->administrateur;
-            
-            if (!$admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès administrateur requis'
-                ], 403);
-            }
-
-            $result = $this->validationService->getHistoriqueValidations();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Historique des validations récupéré avec succès',
-                'data' => $result['data'],
-                'pagination' => $result['pagination']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération de l\'historique',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data'    => ['oeuvre' => $oeuvre->fresh()],
+            'message' => 'Œuvre refusée avec succès',
+        ], 200);
     }
 }

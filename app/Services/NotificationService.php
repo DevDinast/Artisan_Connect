@@ -3,345 +3,68 @@
 namespace App\Services;
 
 use App\Models\Notification;
-use Illuminate\Support\Facades\DB;
+use App\Models\Administrateur;
 
 class NotificationService
 {
     /**
-     * Obtenir les notifications d'un utilisateur
+     * Envoyer une notification à un utilisateur
      */
-    public function getNotifications($utilisateurId)
+    public function notifier(int $userId, string $type, string $titre, string $message, array $data = []): Notification
     {
-        try {
-            $notifications = Notification::where('utilisateur_id', $utilisateurId)
-                ->latest()
-                ->paginate(20);
-
-            $stats = $this->getStatistiquesNotifications($utilisateurId);
-
-            return [
-                'success' => true,
-                'data' => $notifications->items(),
-                'pagination' => [
-                    'current_page' => $notifications->currentPage(),
-                    'per_page' => $notifications->perPage(),
-                    'total' => $notifications->total(),
-                    'last_page' => $notifications->lastPage(),
-                ],
-                'stats' => $stats['data']
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des notifications',
-                'error' => $e->getMessage()
-            ];
-        }
+        return Notification::create([
+            'user_id' => $userId,
+            'type'    => $type,
+            'titre'   => $titre,
+            'message' => $message,
+            'data'    => !empty($data) ? json_encode($data) : null,
+            'lue'     => false,
+        ]);
     }
 
     /**
-     * Obtenir les notifications non lues
+     * Notifier tous les administrateurs
      */
-    public function getNotificationsNonLues($utilisateurId)
+    public function notifierAdmins(string $type, string $titre, string $message, array $data = []): void
     {
-        try {
-            $notifications = Notification::where('utilisateur_id', $utilisateurId)
-                ->where('lue', false)
-                ->latest()
-                ->take(50)
-                ->get();
-
-            return [
-                'success' => true,
-                'data' => $notifications,
-                'count' => $notifications->count()
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des notifications non lues',
-                'error' => $e->getMessage()
-            ];
+        $admins = Administrateur::all();
+        foreach ($admins as $admin) {
+            $this->notifier($admin->user_id, $type, $titre, $message, $data);
         }
     }
 
     /**
      * Marquer une notification comme lue
      */
-    public function marquerCommeLue($notificationId, $utilisateurId)
+    public function marquerLue(int $notificationId, int $userId): bool
     {
-        try {
-            $notification = Notification::where('id', $notificationId)
-                ->where('utilisateur_id', $utilisateurId)
-                ->firstOrFail();
+        $notification = Notification::where('id', $notificationId)
+            ->where('user_id', $userId)
+            ->first();
 
-            $notification->update([
-                'lue' => true,
-                'date_lecture' => now(),
-            ]);
+        if (!$notification) return false;
 
-            return [
-                'success' => true,
-                'message' => 'Notification marquée comme lue avec succès',
-                'data' => $notification->fresh()
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Notification non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors du marquage de la notification comme lue',
-                'error' => $e->getMessage()
-            ];
-        }
+        $notification->update(['lue' => true]);
+        return true;
     }
 
     /**
-     * Marquer toutes les notifications comme lues
+     * Marquer toutes les notifications d'un user comme lues
      */
-    public function marquerToutesCommeLues($utilisateurId)
+    public function marquerToutesLues(int $userId): void
     {
-        try {
-            $marquees = Notification::where('utilisateur_id', $utilisateurId)
-                ->where('lue', false)
-                ->update([
-                    'lue' => true,
-                    'date_lecture' => now(),
-                ]);
-
-            return [
-                'success' => true,
-                'message' => $marquees . ' notification(s) marquée(s) comme lue(s)',
-                'notifications_marquees' => $marquees
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors du marquage des notifications comme lues',
-                'error' => $e->getMessage()
-            ];
-        }
+        Notification::where('user_id', $userId)
+            ->where('lue', false)
+            ->update(['lue' => true]);
     }
 
     /**
-     * Supprimer une notification
+     * Compter les notifications non lues d'un user
      */
-    public function supprimerNotification($notificationId, $utilisateurId)
+    public function compterNonLues(int $userId): int
     {
-        try {
-            $notification = Notification::where('id', $notificationId)
-                ->where('utilisateur_id', $utilisateurId)
-                ->firstOrFail();
-
-            $notification->delete();
-
-            return [
-                'success' => true,
-                'message' => 'Notification supprimée avec succès'
-            ];
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return [
-                'success' => false,
-                'message' => 'Notification non trouvée'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la suppression de la notification',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtenir les statistiques des notifications
-     */
-    public function getStatistiquesNotifications($utilisateurId)
-    {
-        try {
-            $stats = [
-                'total_notifications' => Notification::where('utilisateur_id', $utilisateurId)->count(),
-                'non_lues' => Notification::where('utilisateur_id', $utilisateurId)->where('lue', false)->count(),
-                'lues' => Notification::where('utilisateur_id', $utilisateurId)->where('lue', true)->count(),
-                'aujourd_hui' => Notification::where('utilisateur_id', $utilisateurId)
-                    ->whereDate('created_at', today())
-                    ->count(),
-                'cette_semaine' => Notification::where('utilisateur_id', $utilisateurId)
-                    ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
-                    ->count(),
-                'types' => $this->getRepartitionTypes($utilisateurId),
-            ];
-
-            return [
-                'success' => true,
-                'data' => $stats
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des statistiques',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Créer une notification
-     */
-    public function creerNotification(array $data)
-    {
-        try {
-            $notification = Notification::create([
-                'utilisateur_id' => $data['utilisateur_id'],
-                'type' => $data['type'],
-                'titre' => $data['titre'],
-                'message' => $data['message'],
-                'lue' => false,
-                'donnees_supplementaires' => $data['donnees_supplementaires'] ?? null,
-            ]);
-
-            return [
-                'success' => true,
-                'message' => 'Notification créée avec succès',
-                'data' => $notification
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de la création de la notification',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Envoyer une notification à plusieurs utilisateurs
-     */
-    public function envoyerNotificationMultiple(array $utilisateursIds, array $data)
-    {
-        try {
-            $notifications = [];
-            
-            foreach ($utilisateursIds as $utilisateurId) {
-                $notification = Notification::create([
-                    'utilisateur_id' => $utilisateurId,
-                    'type' => $data['type'],
-                    'titre' => $data['titre'],
-                    'message' => $data['message'],
-                    'lue' => false,
-                    'donnees_supplementaires' => $data['donnees_supplementaires'] ?? null,
-                ]);
-                
-                $notifications[] = $notification;
-            }
-
-            return [
-                'success' => true,
-                'message' => count($notifications) . ' notification(s) envoyée(s) avec succès',
-                'data' => $notifications
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors de l\'envoi des notifications',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Nettoyer les anciennes notifications
-     */
-    public function nettoyerAnciennesNotifications($jours = 30)
-    {
-        try {
-            $supprimees = Notification::where('created_at', '<', now()->subDays($jours))
-                ->where('lue', true)
-                ->delete();
-
-            return [
-                'success' => true,
-                'message' => $supprimees . ' anciennes notifications supprimées',
-                'notifications_supprimees' => $supprimees
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Erreur lors du nettoyage des notifications',
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtenir la répartition des types de notifications
-     */
-    private function getRepartitionTypes($utilisateurId)
-    {
-        $types = Notification::where('utilisateur_id', $utilisateurId)
-            ->selectRaw('type, COUNT(*) as count')
-            ->groupBy('type')
-            ->get();
-
-        $repartition = [];
-        foreach ($types as $type) {
-            $repartition[$type->type] = $type->count;
-        }
-
-        return $repartition;
-    }
-
-    /**
-     * Notifier un artisan (méthode utilitaire)
-     */
-    public function notifierArtisan($artisanId, $type, $titre, $message, $donnees = null)
-    {
-        return $this->creerNotification([
-            'utilisateur_id' => $artisanId,
-            'type' => $type,
-            'titre' => $titre,
-            'message' => $message,
-            'donnees_supplementaires' => $donnees,
-        ]);
-    }
-
-    /**
-     * Notifier un acheteur (méthode utilitaire)
-     */
-    public function notifierAcheteur($acheteurId, $type, $titre, $message, $donnees = null)
-    {
-        return $this->creerNotification([
-            'utilisateur_id' => $acheteurId,
-            'type' => $type,
-            'titre' => $titre,
-            'message' => $message,
-            'donnees_supplementaires' => $donnees,
-        ]);
-    }
-
-    /**
-     * Notifier un administrateur (méthode utilitaire)
-     */
-    public function notifierAdministrateur($adminId, $type, $titre, $message, $donnees = null)
-    {
-        return $this->creerNotification([
-            'utilisateur_id' => $adminId,
-            'type' => $type,
-            'titre' => $titre,
-            'message' => $message,
-            'donnees_supplementaires' => $donnees,
-        ]);
+        return Notification::where('user_id', $userId)
+            ->where('lue', false)
+            ->count();
     }
 }
