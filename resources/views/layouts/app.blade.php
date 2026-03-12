@@ -16,6 +16,7 @@
             <ul class="nav-links">
                 <li><a href="{{ route('auth.register') }}">S’inscrire</a></li>
                 <li><a href="{{ route('auth.login') }}">Connexion</a></li>
+                <li><a href="{{ route('dashboard.artisan') }}">Mon espace</a></li>
             </ul>
         </nav>
     </header>
