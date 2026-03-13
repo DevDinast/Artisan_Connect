@@ -10,3 +10,4 @@ Route::get('/login', fn() => view('auth.login'))->name('login');
 
 Route::get('/dashboard/acheteur', fn() => view('acheteur.dashboard'))->name('dashboard.acheteur');
 Route::get('/dashboard/artisan', fn() => view('artisan.dashboard'))->name('dashboard.artisan');
+Route::get('/artisan/{id}', [ArtisanController::class, 'show']);
