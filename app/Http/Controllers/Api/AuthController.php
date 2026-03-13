@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api;
-
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -220,4 +220,46 @@ class AuthController extends Controller
             'message' => 'Avatar mis à jour',
         ], 200);
     }
+
+
+    public function revokeAllTokens(Request $request)
+    {
+
+        $request->user()->tokens()->delete();
+        return response()->json([
+           'success' => true,
+            'data'    =>null,
+            'message' => 'tous les appareils sont déconectés',
+        ]);
+
+    }
+
+    public function changePassword(Request $request)
+    {
+      $user=$request->user();
+      $data=$request->validate([
+      'current_password'=>'required',
+      'password'=>'required|min:8|confirmed',
+      ]);
+
+      if(Hash::check($data['current_password'],$user->password))
+        {
+         $user->update(['password'=>Hash::make($data['password'])]);
+        }
+    else
+    {
+        return response()->json([
+           'success' => false,
+            'data'    =>null,
+            'message' => 'erreur,veuillez réessayez',
+        ],422);
+    }
+
+    $request->user()->tokens()->delete();
+        return response()->json([
+           'success' => true,
+            'data'    =>null,
+            'message' => 'mot de passe modifié',
+        ],200);
+}
 }

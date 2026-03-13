@@ -152,4 +152,6 @@ class CatalogController extends Controller
             'message' => 'Statistiques récupérées avec succès',
         ], 200);
     }
+
+    
 }
