@@ -11,7 +11,7 @@
     <p>Découvrez des artisans talentueux et achetez leurs œuvres uniques, faites main avec passion.</p>
     <div class="hero-actions">
         <a href="{{ route('auth.register') }}" class="btn">Commencer gratuitement</a>
-        <a href="#categories" class="btn-outline">Explorer les œuvres</a>
+        <a href="{{ route('catalogue.categories') }}" class="btn-outline">Explorer les œuvres</a>
     </div>
     <div class="hero-stats">
         <div class="stat">
@@ -42,19 +42,19 @@
             <div class="card-icon">🎨</div>
             <h3>Peinture</h3>
             <p>Œuvres peintes par des artisans locaux.</p>
-            <a href="#" class="card-link">Voir les œuvres →</a>
+            <a href="{{ route('catalogue.categories') }}" class="card-link">Voir les œuvres →</a>
         </div>
         <div class="card">
             <div class="card-icon">💍</div>
-            <h3>Bijoux</h3>
+            <h3>Bijouterie</h3>
             <p>Créations uniques faites main.</p>
-            <a href="#" class="card-link">Voir les créations →</a>
+            <a href="{{ route('catalogue.categories') }}" class="card-link">Voir les créations →</a>
         </div>
         <div class="card">
             <div class="card-icon">🗿</div>
             <h3>Sculpture</h3>
             <p>Objets décoratifs et sculptures d'art.</p>
-            <a href="#" class="card-link">Voir les sculptures →</a>
+            <a href="{{ route('catalogue.categories') }}" class="card-link">Voir les sculptures →</a>
         </div>
     </div>
 </section>
@@ -82,7 +82,7 @@
                 <span class="artisan-tag">Bijoux traditionnels</span>
                 <p>Maître joaillier alliant savoir-faire traditionnel et modernité.</p>
             </div>
-            <a href="#" class="card-link">Voir le profil →</a>
+            <a href="" class="card-link">Voir le profil →</a>
         </div>
         <div class="card card-artisan">
             <div class="artisan-avatar">FD</div>

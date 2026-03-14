@@ -77,7 +77,11 @@
               {"name": "Mes Oeuvres", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], 
               "url": {"raw": "{{base_url}}/artisan/oeuvres", "host": ["{{base_url}}"], 
               "path": ["artisan", "oeuvres"]}}}, 
-              {"name": "Créer Oeuvre", "request": {"method": "POST", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"categorie_id\": 1,\n  \"titre\": \"Test Œuvre\",\n  \"description\": \"Description de test\",\n  \"prix\": 5000,\n  \"quantite_disponible\": 1,\n  \"dimensions\": {\n    \"longueur\": 10,\n    \"largeur\": 10,\n    \"hauteur\": 5\n  },\n  \"materiaux\": [\"Bois\", \"Peinture\"]\n}"}, "url": {"raw": "{{base_url}}/artisan/oeuvres", 
+              {"name": "Créer Oeuvre", 
+              "request": {"method": "POST", "header":
+               [{"key": "Authorization", "value": "Bearer {{token}}"}, 
+               {"key": "Content-Type", "value": "application/json"}], 
+               "body": {"mode": "raw", "raw": "{\n  \"categorie_id\": 1,\n  \"titre\": \"Test Œuvre\",\n  \"description\": \"Description de test\",\n  \"prix\": 5000,\n  \"quantite_disponible\": 1,\n  \"dimensions\": {\n    \"longueur\": 10,\n    \"largeur\": 10,\n    \"hauteur\": 5\n  },\n  \"materiaux\": [\"Bois\", \"Peinture\"]\n}"}, "url": {"raw": "{{base_url}}/artisan/oeuvres", 
               "host": ["{{base_url}}"], "path": ["artisan", "oeuvres"]}}}]}, {"name": "Admin", "item": [{"name": "Dashboard", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": {"raw": "{{base_url}}/admin/dashboard", "host": ["{{base_url}}"], "path": ["admin", "dashboard"]}}}, 
               {"name": "Oeuvres en attente", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": {"raw": "{{base_url}}/admin/oeuvres/en-attente", "host": ["{{base_url}}"], "path": ["admin", "oeuvres", "en-attente"]}}},
                {"name": "Valider Oeuvre", "request": {"method": "PUT", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"notes_validation\": \"Œuvre de grande qualité\"\n}"}, "url": {"raw": "{{base_url}}/admin/oeuvres/1/valider", "host": ["{{base_url}}"],
