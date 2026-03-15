@@ -49,7 +49,9 @@ Route::prefix('v1')->group(function () {
         Route::get('oeuvres',                  [CatalogController::class, 'oeuvres']);
         Route::get('oeuvres/{id}',             [CatalogController::class, 'showOeuvre']);
         Route::get('oeuvres/{id}/similar',     [CatalogController::class, 'similarOeuvres']);
-        Route::get('stats',                    [CatalogController::class, 'stats']);
+        Route::get('stats',                   [CatalogController::class, 'stats']);
+        Route::get('artisans',       [CatalogController::class, 'artisans']);
+        Route::get('artisans/{id}',  [CatalogController::class, 'showArtisan']);
         Route::get('oeuvres/{id}/avis',        [AvisController::class, 'getAvisOeuvre']);
         Route::get('artisans/{id}/avis/stats', [AvisController::class, 'getStatistiquesAvisArtisan']);
     });

@@ -70,25 +70,22 @@
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const btn = document.getElementById('submitBtn');
+    const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled = true;
+    btn.disabled   = true;
     btn.textContent = 'Inscription...';
     alertBox.innerHTML = '';
 
     try {
         // Étape 1 : récupérer le cookie CSRF de Sanctum
-        await fetch('/sanctum/csrf-cookie', {
-            method: 'GET',
-            credentials: 'include',
-        });
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
 
         // Étape 2 : lire le token XSRF dans les cookies
         const xsrfToken = decodeURIComponent(
             document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
         );
 
-        // Étape 3 : envoyer le formulaire
+        // Étape 3 : envoyer le formulaire (FormData pour l'avatar)
         const formData = new FormData(this);
 
         const response = await fetch('/api/v1/auth/register', {
@@ -96,6 +93,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             headers: {
                 'Accept': 'application/json',
                 'X-XSRF-TOKEN': xsrfToken,
+                // Pas de Content-Type : laissé au navigateur pour multipart/form-data
             },
             credentials: 'include',
             body: formData,
@@ -114,13 +112,15 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             return;
         }
 
-        localStorage.setItem('token', data.token);
+        // Stocker le token Bearer pour les appels API suivants
+        if (data.token) localStorage.setItem('token', data.token);
 
         const role = data.user?.role;
         window.location.href = role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur';
 
     } catch (err) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau. Réessayez.</li></ul></div>`;
+        console.error(err);
     } finally {
         btn.disabled = false;
         btn.textContent = "S'inscrire";
