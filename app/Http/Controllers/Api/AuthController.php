@@ -79,7 +79,9 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'data'    => null,
-                'message' => 'Une erreur est survenue, veuillez réessayer.',
+               'message' => $e->getMessage(), // ← ajouter
+                'file'    => $e->getFile(),    // ← ajouter
+                'line'    => $e->getLine(),    // ← ajouter
             ], 500);
         }
     }

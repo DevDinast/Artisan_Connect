@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ArtisanController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,3 +46,13 @@ Route::get('/profil', fn() => view('profil.edit'))->name('me.profil');
 Route::get('/artisan/oeuvres/create',    fn() => view('artisan.oeuvres.create'))->name('artisan.oeuvres.create');
 Route::get('/artisan/oeuvres/{id}/edit', fn($id) => view('artisan.oeuvres.edit', ['id' => $id]))->name('artisan.oeuvres.edit');
 Route::get('/artisan/{id}',              [ArtisanController::class, 'show'])->name('artisan.show');
+
+
+
+
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+    $role = $request->user()->role;
+    return redirect($role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur');
+})->middleware(['auth', 'signed'])->name('verification.verify');
