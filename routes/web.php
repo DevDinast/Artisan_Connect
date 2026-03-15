@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ArtisanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,3 +44,4 @@ Route::get('/profil', fn() => view('profil.edit'))->name('me.profil');
 */
 Route::get('/artisan/oeuvres/create',    fn() => view('artisan.oeuvres.create'))->name('artisan.oeuvres.create');
 Route::get('/artisan/oeuvres/{id}/edit', fn($id) => view('artisan.oeuvres.edit', ['id' => $id]))->name('artisan.oeuvres.edit');
+Route::get('/artisan/{id}',              [ArtisanController::class, 'show'])->name('artisan.show');
