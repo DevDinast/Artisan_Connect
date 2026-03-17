@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\ArtisanController;
-use Illuminate\Support\Facades\Route;
+use App\Models\User;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,7 +13,12 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 Route::get('/', fn() => view('home'))->name('home');
 Route::get('/catalogue', fn() => view('catalogue.categories'))->name('catalogue.categories');
 Route::get('/catalogue/oeuvres/{id}', fn($id) => view('catalogue.show', ['id' => $id]))->name('catalogue.oeuvre');
-Route::get('/catalogue/artisans/{id}', fn($id) => view('catalogue.artisan', ['id' => $id]))->name('catalogue.artisan');
+
+// Profil public artisan — charge le modèle User et le passe à la vue
+Route::get('/catalogue/artisans/{id}', function ($id) {
+    $artisan = User::where('role', 'artisan')->findOrFail($id);
+    return view('catalogue.artisan', ['artisan' => $artisan]);
+})->name('catalogue.artisan');
 
 /*
 |--------------------------------------------------------------------------
@@ -47,10 +53,11 @@ Route::get('/artisan/oeuvres/create',    fn() => view('artisan.oeuvres.create'))
 Route::get('/artisan/oeuvres/{id}/edit', fn($id) => view('artisan.oeuvres.edit', ['id' => $id]))->name('artisan.oeuvres.edit');
 Route::get('/artisan/{id}',              [ArtisanController::class, 'show'])->name('artisan.show');
 
-
-
-
-
+/*
+|--------------------------------------------------------------------------
+| Vérification email
+|--------------------------------------------------------------------------
+*/
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
     $role = $request->user()->role;

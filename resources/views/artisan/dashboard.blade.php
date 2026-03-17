@@ -12,7 +12,7 @@
             <h1>Bonjour, {{ auth()->user()?->name ?? 'Artisan' }} 🎨</h1>
             <p>Gérez votre atelier et suivez vos ventes.</p>
         </div>
-        <a href="#" id="btn-ajouter-oeuvre" class="btn" style="margin-left:auto">+ Ajouter une œuvre</a>
+        <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-left:auto">+ Ajouter une œuvre</a>
     </div>
 
     {{-- Stats dynamiques --}}
@@ -60,8 +60,7 @@
     <section class="cta-section" style="margin-top:3rem">
         <h2>Boostez votre visibilité</h2>
         <p>Complétez votre profil et ajoutez des photos de qualité pour attirer plus d'acheteurs.</p>
-
-         <a href="#" class="btn">Compléter mon profil</a>
+        <a href="{{ route('me.profil') }}" class="btn">Compléter mon profil</a>
     </section>
 
 </div>
@@ -107,7 +106,7 @@ async function loadOeuvres() {
                     <span class="empty-icon">🖼️</span>
                     <h3>Aucune œuvre publiée</h3>
                     <p>Commencez par ajouter votre première création.</p>
-                    <a href="#" id="btn-ajouter-empty" class="btn" style="margin-top:1rem">Ajouter une œuvre</a>
+                    <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-top:1rem">Ajouter une œuvre</a>
                 </div>`;
             return;
         }
@@ -172,8 +171,8 @@ async function supprimerOeuvre(id) {
 async function loadCommandes() {
     const container = document.getElementById('commandes-container');
     try {
-        const res      = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
-        const json     = await res.json();
+        const res       = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
+        const json      = await res.json();
         const commandes = json.data ?? json;
 
         if (!Array.isArray(commandes) || commandes.length === 0) {
