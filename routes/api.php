@@ -33,7 +33,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('test')->group(function () {
         Route::get('public',   fn() => response()->json(['message' => 'Public']));
         Route::middleware('auth:sanctum')->get('auth', fn() => response()->json(['message' => 'Auth']));
-        Route::middleware(['auth:sanctum', 'email.verified'])->get('verified', fn() => response()->json(['message' => 'Verified']));
+        //Route::middleware(['auth:sanctum', 'email.verified'])->get('verified', fn() => response()->json(['message' => 'Verified']));
         Route::middleware(['auth:sanctum', 'role:artisan'])->get('artisan', fn() => response()->json(['message' => 'Artisan']));
         Route::middleware(['auth:sanctum', 'role:acheteur'])->get('acheteur', fn() => response()->json(['message' => 'Acheteur']));
         Route::middleware(['auth:sanctum', 'role:administrateur'])->get('admin', fn() => response()->json(['message' => 'Admin']));

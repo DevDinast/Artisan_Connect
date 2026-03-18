@@ -22,16 +22,16 @@
             <span class="stat-label">Œuvres publiées</span>
         </div>
         <div class="stat-card">
+            <span class="stat-num" id="stat-attente">—</span>
+            <span class="stat-label">En attente</span>
+        </div>
+        <div class="stat-card">
             <span class="stat-num" id="stat-commandes">—</span>
             <span class="stat-label">Commandes reçues</span>
         </div>
         <div class="stat-card">
             <span class="stat-num" id="stat-revenus">—</span>
             <span class="stat-label">Revenus totaux</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-num" id="stat-avis">—</span>
-            <span class="stat-label">Avis clients</span>
         </div>
     </div>
 
@@ -67,44 +67,67 @@
 
 <script>
 const token = localStorage.getItem('token');
+const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
-const authHeaders = {
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${token}`,
-};
+// ── Badge couleur selon statut ────────────────────────────────────────────────
+function badgeStatut(statut) {
+    const badges = {
+        'validee'    : 'background:#d1fae5;color:#065f46',
+        'en_attente' : 'background:#fef3c7;color:#92400e',
+        'brouillon'  : 'background:#f3f4f6;color:#374151',
+        'refusee'    : 'background:#fee2e2;color:#991b1b',
+    };
+    const labels = {
+        'validee'    : '✓ Validée',
+        'en_attente' : '⏳ En attente',
+        'brouillon'  : '📝 Brouillon',
+        'refusee'    : '✗ Refusée',
+    };
+    const style = badges[statut] ?? 'background:#f3f4f6;color:#374151';
+    const label = labels[statut] ?? statut;
+    return `<span style="${style};padding:0.2rem 0.6rem;border-radius:1rem;font-size:0.75rem;font-weight:600">${label}</span>`;
+}
+
+// ── Image depuis chemin storage ───────────────────────────────────────────────
+function imageUrl(images) {
+    if (!images?.length) return 'https://via.placeholder.com/400x300?text=Oeuvre';
+    const img = images[0];
+    // ✅ Le backend retourne 'chemin' pas 'url'
+    return img.url ?? (img.chemin ? `/storage/${img.chemin}` : 'https://via.placeholder.com/400x300?text=Oeuvre');
+}
 
 // ── Dashboard stats ───────────────────────────────────────────────────────────
 async function loadDashboard() {
     try {
         const res  = await fetch('/api/v1/artisan/dashboard', { headers: authHeaders, credentials: 'include' });
         const json = await res.json();
-        const d    = json.data ?? json;
+        // ✅ Le backend retourne data.stats
+        const d    = json.data?.stats ?? json.data ?? json;
 
-        document.getElementById('stat-oeuvres').textContent   = d.total_oeuvres   ?? 0;
-        document.getElementById('stat-commandes').textContent = d.total_commandes  ?? 0;
-        document.getElementById('stat-avis').textContent      = d.total_avis       ?? 0;
+        document.getElementById('stat-oeuvres').textContent   = d.nb_oeuvres_publiees  ?? d.total_oeuvres   ?? 0;
+        document.getElementById('stat-attente').textContent   = d.nb_oeuvres_attente   ?? 0;
+        document.getElementById('stat-commandes').textContent = d.nb_ventes            ?? d.total_commandes ?? 0;
 
-        const revenus = Number(d.revenus_totaux ?? 0).toLocaleString('fr-FR');
+        const revenus = Number(d.revenus_total ?? d.revenus_totaux ?? 0).toLocaleString('fr-FR');
         document.getElementById('stat-revenus').textContent   = revenus + ' FCFA';
 
-    } catch (e) {
-        console.error('Erreur dashboard', e);
-    }
+    } catch (e) { console.error('Erreur dashboard', e); }
 }
 
 // ── Mes œuvres ────────────────────────────────────────────────────────────────
 async function loadOeuvres() {
     const container = document.getElementById('oeuvres-container');
     try {
-        const res     = await fetch('/api/v1/artisan/oeuvres', { headers: authHeaders, credentials: 'include' });
-        const json    = await res.json();
-        const oeuvres = json.data ?? json;
+        const res  = await fetch('/api/v1/artisan/oeuvres', { headers: authHeaders, credentials: 'include' });
+        const json = await res.json();
+        // ✅ CORRECTION : les œuvres sont dans data.oeuvres
+        const oeuvres = json.data?.oeuvres ?? json.data ?? json;
 
         if (!Array.isArray(oeuvres) || oeuvres.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">🖼️</span>
-                    <h3>Aucune œuvre publiée</h3>
+                    <h3>Aucune œuvre pour le moment</h3>
                     <p>Commencez par ajouter votre première création.</p>
                     <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-top:1rem">Ajouter une œuvre</a>
                 </div>`;
@@ -114,15 +137,12 @@ async function loadOeuvres() {
         container.innerHTML = `
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 ${oeuvres.map(o => {
-                    const image  = o.images?.[0]?.url ?? o.image ?? 'https://via.placeholder.com/400x300?text=Oeuvre';
-                    const statut = o.statut ?? 'brouillon';
-                    const prix   = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
-                    const badge  = {
-                        'publie'     : 'bg-green-100 text-green-700',
-                        'en_attente' : 'bg-yellow-100 text-yellow-700',
-                        'brouillon'  : 'bg-gray-100 text-gray-600',
-                        'refuse'     : 'bg-red-100 text-red-700',
-                    }[statut] ?? 'bg-gray-100 text-gray-600';
+                    // ✅ CORRECTION : chemin au lieu de url
+                    const image     = imageUrl(o.images);
+                    const statut    = o.statut ?? 'brouillon';
+                    const prix      = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
+                    // ✅ CORRECTION : name au lieu de nom
+                    const categorie = o.categorie?.name ?? o.categorie?.nom ?? 'Divers';
 
                     return `
                     <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -130,12 +150,20 @@ async function loadOeuvres() {
                         <div class="p-4">
                             <div class="flex justify-between items-start mb-2">
                                 <h3 class="text-lg font-semibold">${o.titre}</h3>
-                                <span class="text-xs px-2 py-1 rounded-full ${badge}">${statut.replace('_', ' ')}</span>
+                                ${badgeStatut(statut)}
                             </div>
+                            <p class="text-gray-500 text-sm mb-1">${categorie}</p>
                             <p class="text-gray-800 font-bold mb-3">${prix}</p>
+                            ${o.motif_refus ? `<p style="color:#991b1b;font-size:0.8rem;margin-bottom:0.5rem">Motif : ${o.motif_refus}</p>` : ''}
                             <div class="flex gap-2">
-                                <a href="/artisan/oeuvres/${o.id}/edit" class="flex-1 text-center border border-blue-500 text-blue-500 py-1 rounded hover:bg-blue-50 transition text-sm">Modifier</a>
-                                <button onclick="supprimerOeuvre(${o.id})" class="flex-1 text-center border border-red-400 text-red-400 py-1 rounded hover:bg-red-50 transition text-sm">Supprimer</button>
+                                <a href="/artisan/oeuvres/${o.id}/edit"
+                                   class="flex-1 text-center border border-blue-500 text-blue-500 py-1 rounded hover:bg-blue-50 transition text-sm">
+                                   Modifier
+                                </a>
+                                <button onclick="supprimerOeuvre(${o.id})"
+                                    class="flex-1 text-center border border-red-400 text-red-400 py-1 rounded hover:bg-red-50 transition text-sm">
+                                    Supprimer
+                                </button>
                             </div>
                         </div>
                     </div>`;
@@ -152,28 +180,26 @@ async function loadOeuvres() {
 async function supprimerOeuvre(id) {
     if (!confirm('Supprimer cette œuvre définitivement ?')) return;
     try {
-        const xsrfToken = decodeURIComponent(
-            document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
-        );
-        const res = await fetch(`/api/v1/artisan/oeuvres/${id}`, {
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+        const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
+        const res  = await fetch(`/api/v1/artisan/oeuvres/${id}`, {
             method: 'DELETE',
-            headers: { ...authHeaders, 'X-XSRF-TOKEN': xsrfToken },
+            headers: { ...authHeaders, 'X-XSRF-TOKEN': xsrf },
             credentials: 'include',
         });
         if (res.ok) loadOeuvres();
         else alert('Erreur lors de la suppression.');
-    } catch (e) {
-        alert('Erreur réseau.');
-    }
+    } catch (e) { alert('Erreur réseau.'); }
 }
 
 // ── Dernières commandes ───────────────────────────────────────────────────────
 async function loadCommandes() {
     const container = document.getElementById('commandes-container');
     try {
-        const res       = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
-        const json      = await res.json();
-        const commandes = json.data ?? json;
+        const res      = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
+        const json     = await res.json();
+        // ✅ Le backend retourne data.ventes
+        const commandes = json.data?.ventes ?? json.data ?? json;
 
         if (!Array.isArray(commandes) || commandes.length === 0) {
             container.innerHTML = `
@@ -201,7 +227,7 @@ async function loadCommandes() {
                     <tr class="hover:bg-gray-50">
                         <td class="p-3 border-b">#${c.id}</td>
                         <td class="p-3 border-b">${c.oeuvre?.titre ?? '—'}</td>
-                        <td class="p-3 border-b">${Number(c.montant ?? 0).toLocaleString('fr-FR')} FCFA</td>
+                        <td class="p-3 border-b">${Number(c.montant_artisan ?? c.montant ?? 0).toLocaleString('fr-FR')} FCFA</td>
                         <td class="p-3 border-b">${c.statut ?? '—'}</td>
                         <td class="p-3 border-b">${c.created_at ? new Date(c.created_at).toLocaleDateString('fr-FR') : '—'}</td>
                     </tr>`).join('')}

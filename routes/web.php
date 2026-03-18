@@ -63,3 +63,6 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
     $role = $request->user()->role;
     return redirect($role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur');
 })->middleware(['auth', 'signed'])->name('verification.verify');
+
+// Dans web.php
+Route::get('/dashboard/admin', fn() => view('admin.dashboard'))->name('dashboard.admin');

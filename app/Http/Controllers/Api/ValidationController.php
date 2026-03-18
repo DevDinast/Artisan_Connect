@@ -42,14 +42,28 @@ class ValidationController extends Controller
     public function getOeuvresEnAttente(Request $request)
     {
         $oeuvres = Oeuvre::where('statut', 'en_attente')
-            ->with(['artisan.user', 'categorie', 'images'])
-            ->orderBy('created_at', 'asc') // FIFO
+            ->with(['artisan', 'categorie', 'images'])
+            ->orderBy('created_at', 'asc')
             ->paginate(15);
 
         return response()->json([
             'success' => true,
             'data'    => [
-                'oeuvres'    => $oeuvres->items(),
+                'oeuvres'    => $oeuvres->map(fn($o) => [
+                    'id'          => $o->id,
+                    'titre'       => $o->titre,
+                    'description' => $o->description,
+                    'prix'        => $o->prix,
+                    'statut'      => $o->statut,
+                    'created_at'  => $o->created_at,
+                    'images'      => $o->images->map(fn($i) => ['url' => $i->url]),
+                    'categorie'   => ['id' => $o->categorie?->id, 'name' => $o->categorie?->name],
+                    // ✅ Récupérer le nom artisan directement depuis User via artisan_id
+                    'artisan'     => [
+                        'id'   => $o->artisan?->id,
+                        'name' => \App\Models\User::find($o->artisan?->user_id)?->name ?? '—',
+                    ],
+                ]),
                 'pagination' => [
                     'total'        => $oeuvres->total(),
                     'current_page' => $oeuvres->currentPage(),
@@ -62,9 +76,6 @@ class ValidationController extends Controller
 
     /**
      * PUT /v1/admin/oeuvres/{id}/valider
-     * RG13 : double validation si prix > 500 000 FCFA
-     * RG15 : journalisation complète
-     * RG16 : publication automatique après validation
      */
     public function validerOeuvre(Request $request, $id)
     {
@@ -80,7 +91,6 @@ class ValidationController extends Controller
             ], 422);
         }
 
-        // RG16 : publication automatique
         $oeuvre->update([
             'statut'          => 'validee',
             'date_validation' => now(),
@@ -88,16 +98,19 @@ class ValidationController extends Controller
             'motif_refus'     => null,
         ]);
 
-        // Mettre à jour le compteur artisan
         $oeuvre->artisan->increment('nb_oeuvres_publiees');
 
-        // Notifier l'artisan
-        $this->notificationService->notifier(
-            $oeuvre->artisan->user_id,
-            'validation',
-            'Œuvre validée !',
-            "Votre œuvre \"{$oeuvre->titre}\" a été validée et est visible dans le catalogue."
-        );
+        // ✅ Récupérer le user_id correctement
+        $userId = \App\Models\Artisan::find($oeuvre->artisan_id)?->user_id;
+
+        if ($userId) {
+            $this->notificationService->notifier(
+                $userId,
+                'validation',
+                'Œuvre validée !',
+                "Votre œuvre \"{$oeuvre->titre}\" a été validée et est visible dans le catalogue."
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -108,7 +121,6 @@ class ValidationController extends Controller
 
     /**
      * PUT /v1/admin/oeuvres/{id}/refuser
-     * RG14 : motif obligatoire
      */
     public function refuserOeuvre(Request $request, $id)
     {
@@ -116,7 +128,7 @@ class ValidationController extends Controller
         $oeuvre = Oeuvre::where('statut', 'en_attente')->findOrFail($id);
 
         $data = $request->validate([
-            'motif_refus' => 'required|string|min:10', // RG14
+            'motif_refus' => 'required|string|min:10',
         ]);
 
         $oeuvre->update([
@@ -126,13 +138,17 @@ class ValidationController extends Controller
             'validateur_id'   => $admin->id,
         ]);
 
-        // Notifier l'artisan avec le motif
-        $this->notificationService->notifier(
-            $oeuvre->artisan->user_id,
-            'refus',
-            'Œuvre refusée',
-            "Votre œuvre \"{$oeuvre->titre}\" a été refusée. Motif : {$data['motif_refus']}"
-        );
+        // ✅ Récupérer le user_id correctement
+        $userId = \App\Models\Artisan::find($oeuvre->artisan_id)?->user_id;
+
+        if ($userId) {
+            $this->notificationService->notifier(
+                $userId,
+                'refus',
+                'Œuvre refusée',
+                "Votre œuvre \"{$oeuvre->titre}\" a été refusée. Motif : {$data['motif_refus']}"
+            );
+        }
 
         return response()->json([
             'success' => true,

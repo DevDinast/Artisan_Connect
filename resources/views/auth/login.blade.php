@@ -39,25 +39,19 @@
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const btn = document.getElementById('submitBtn');
+    const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled = true;
+    btn.disabled   = true;
     btn.textContent = 'Connexion...';
     alertBox.innerHTML = '';
 
     try {
-        // Étape 1 : récupérer le cookie CSRF de Sanctum
-        await fetch('/sanctum/csrf-cookie', {
-            method: 'GET',
-            credentials: 'include',
-        });
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
 
-        // Étape 2 : lire le token XSRF dans les cookies
         const xsrfToken = decodeURIComponent(
             document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
         );
 
-        // Étape 3 : envoyer le formulaire
         const response = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: {
@@ -79,19 +73,30 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             if (data.errors) {
                 messages = Object.values(data.errors).flat().map(e => `<li>${e}</li>`).join('');
             } else {
-                messages = `<li>${data.detail || data.message || data.error || 'Une erreur est survenue.'}</li>`;
+                messages = `<li>${data.message || data.error || 'Une erreur est survenue.'}</li>`;
             }
             alertBox.innerHTML = `<div class="alert alert-error"><ul>${messages}</ul></div>`;
             return;
         }
 
-        localStorage.setItem('token', data.token);
+        // ✅ Le contrôleur retourne { success, data: { user, token }, message }
+        const token = data.data?.token ?? data.token;
+        const role  = data.data?.user?.role ?? data.user?.role;
 
-        const role = data.user?.role;
-        window.location.href = role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur';
+        if (token) localStorage.setItem('token', token);
+
+        // ✅ Redirection selon le rôle
+        if (role === 'artisan') {
+            window.location.href = '/dashboard/artisan';
+        } else if (role === 'administrateur') {
+            window.location.href = '/dashboard/admin';
+        } else {
+            window.location.href = '/dashboard/acheteur';
+        }
 
     } catch (err) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau. Réessayez.</li></ul></div>`;
+        console.error(err);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Se connecter';
