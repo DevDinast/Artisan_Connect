@@ -6,18 +6,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('panier_items', function (Blueprint $table) {
+        Schema::create('panier_items', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('acheteur_id')->constrained('acheteurs')->onDelete('cascade');
             $table->foreignId('oeuvre_id')->constrained('oeuvres')->onDelete('cascade');
             $table->integer('quantite')->default(1);
+            $table->timestamps();
         });
     }
     public function down(): void
     {
-        Schema::table('panier_items', function (Blueprint $table) {
-            $table->dropForeign(['acheteur_id']);
-            $table->dropForeign(['oeuvre_id']);
-            $table->dropColumn(['acheteur_id', 'oeuvre_id', 'quantite']);
-        });
+        Schema::dropIfExists('panier_items');
     }
 };
