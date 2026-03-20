@@ -29,10 +29,10 @@ class CatalogController extends Controller
     */
     public function oeuvres(Request $request): JsonResponse
     {
-        // ✅ CORRECTION : 'validee' au lieu de 'publie'
         $query = Oeuvre::query()
             ->where('statut', 'validee')
-            ->with(['images', 'categorie', 'artisan:id,name,specialite,avatar_url']);
+            // ✅ CORRECTION : charger artisan.user pour accéder au nom
+            ->with(['images', 'categorie', 'artisan.user']);
 
         if ($search = $request->input('search')) {
             $query->where(fn($q) =>
@@ -61,14 +61,17 @@ class CatalogController extends Controller
                 'titre'     => $o->titre,
                 'prix'      => $o->prix,
                 'statut'    => $o->statut,
-                'image'     => $o->images->first()?->url ?? null,
-                'images'    => $o->images->map(fn($i) => ['url' => $i->url]),
+                'image'     => $o->images->first()?->url ?? ($o->images->first()?->chemin ? '/storage/' . $o->images->first()->chemin : null),
+                'images'    => $o->images->map(fn($i) => [
+                    'url' => $i->url ?? ($i->chemin ? '/storage/' . $i->chemin : null),
+                ]),
                 'categorie' => ['id' => $o->categorie?->id, 'nom' => $o->categorie?->name],
+                // ✅ CORRECTION : nom depuis artisan.user
                 'artisan'   => [
                     'id'         => $o->artisan?->id,
-                    'name'       => $o->artisan?->name,
+                    'name'       => $o->artisan?->user?->name,
                     'specialite' => $o->artisan?->specialite,
-                    'avatar'     => $o->artisan?->avatar_url,
+                    'avatar'     => $o->artisan?->user?->avatar,
                 ],
             ]),
             'meta' => [
@@ -86,9 +89,9 @@ class CatalogController extends Controller
     */
     public function showOeuvre(int $id): JsonResponse
     {
-        // ✅ CORRECTION : 'validee' au lieu de 'publie'
         $oeuvre = Oeuvre::where('statut', 'validee')
-            ->with(['images', 'categorie', 'artisan:id,name,bio,specialite,avatar_url'])
+            // ✅ CORRECTION : charger artisan.user
+            ->with(['images', 'categorie', 'artisan.user'])
             ->findOrFail($id);
 
         return response()->json(['data' => [
@@ -97,14 +100,16 @@ class CatalogController extends Controller
             'description' => $oeuvre->description,
             'prix'        => $oeuvre->prix,
             'statut'      => $oeuvre->statut,
-            'images'      => $oeuvre->images->map(fn($i) => ['url' => $i->url]),
+            'images'      => $oeuvre->images->map(fn($i) => [
+                'url' => $i->url ?? ($i->chemin ? '/storage/' . $i->chemin : null),
+            ]),
             'categorie'   => ['id' => $oeuvre->categorie?->id, 'nom' => $oeuvre->categorie?->name],
             'artisan'     => [
                 'id'         => $oeuvre->artisan?->id,
-                'name'       => $oeuvre->artisan?->name,
-                'bio'        => $oeuvre->artisan?->bio,
+                'name'       => $oeuvre->artisan?->user?->name,
+                'bio'        => $oeuvre->artisan?->biographie,
                 'specialite' => $oeuvre->artisan?->specialite,
-                'avatar'     => $oeuvre->artisan?->avatar_url,
+                'avatar'     => $oeuvre->artisan?->user?->avatar,
             ],
         ]]);
     }
@@ -116,7 +121,6 @@ class CatalogController extends Controller
     */
     public function similarOeuvres(int $id): JsonResponse
     {
-        // ✅ CORRECTION : 'validee' au lieu de 'publie'
         $oeuvre = Oeuvre::where('statut', 'validee')->findOrFail($id);
 
         $similaires = Oeuvre::where('statut', 'validee')
@@ -130,7 +134,7 @@ class CatalogController extends Controller
                 'id'        => $o->id,
                 'titre'     => $o->titre,
                 'prix'      => $o->prix,
-                'image'     => $o->images->first()?->url ?? null,
+                'image'     => $o->images->first()?->url ?? ($o->images->first()?->chemin ? '/storage/' . $o->images->first()->chemin : null),
                 'categorie' => $o->categorie?->name,
             ]),
         ]);
@@ -144,7 +148,6 @@ class CatalogController extends Controller
     public function stats(): JsonResponse
     {
         return response()->json(['data' => [
-            // ✅ CORRECTION : 'validee' au lieu de 'publie'
             'total_oeuvres'    => Oeuvre::where('statut', 'validee')->count(),
             'total_artisans'   => User::where('role', 'artisan')->count(),
             'total_categories' => Categorie::count(),
@@ -161,11 +164,11 @@ class CatalogController extends Controller
         $query = User::query()
             ->where('role', 'artisan')
             ->withCount([
-                // ✅ CORRECTION : 'validee' au lieu de 'publie'
                 'oeuvres as total_oeuvres' => fn($q) => $q->where('statut', 'validee'),
                 'avisRecus as total_avis',
             ])
-            ->withAvg('avisRecus as note_moyenne', 'note');
+            ->withAvg('avisRecus as note_moyenne', 'note')
+            ->with('artisan');
 
         if ($search = $request->input('search')) {
             $query->where('name', 'like', "%{$search}%");
@@ -187,9 +190,9 @@ class CatalogController extends Controller
             'data' => $artisans->map(fn($a) => [
                 'id'            => $a->id,
                 'name'          => $a->name,
-                'bio'           => $a->bio        ?? null,
-                'specialite'    => $a->specialite ?? null,
-                'avatar'        => $a->avatar_url ?? null,
+                'bio'           => $a->artisan?->biographie ?? null,
+                'specialite'    => $a->artisan?->specialite ?? null,
+                'avatar'        => $a->avatar ? '/storage/' . $a->avatar : null,
                 'total_oeuvres' => $a->total_oeuvres,
                 'total_avis'    => $a->total_avis,
                 'note_moyenne'  => round($a->note_moyenne ?? 0, 1),
@@ -215,9 +218,9 @@ class CatalogController extends Controller
                 'avisRecus as total_avis',
             ])
             ->withAvg('avisRecus as note_moyenne', 'note')
+            ->with('artisan')
             ->findOrFail($id);
 
-        // ✅ CORRECTION : 'validee' au lieu de 'publie'
         $oeuvres = $artisan->oeuvres()
             ->where('statut', 'validee')
             ->with(['images', 'categorie'])
@@ -226,9 +229,9 @@ class CatalogController extends Controller
         return response()->json(['data' => [
             'id'            => $artisan->id,
             'name'          => $artisan->name,
-            'bio'           => $artisan->bio        ?? null,
-            'specialite'    => $artisan->specialite ?? null,
-            'avatar'        => $artisan->avatar_url ?? null,
+            'bio'           => $artisan->artisan?->biographie ?? null,
+            'specialite'    => $artisan->artisan?->specialite ?? null,
+            'avatar'        => $artisan->avatar ? '/storage/' . $artisan->avatar : null,
             'total_oeuvres' => $artisan->total_oeuvres,
             'total_avis'    => $artisan->total_avis,
             'note_moyenne'  => round($artisan->note_moyenne ?? 0, 1),
@@ -236,7 +239,7 @@ class CatalogController extends Controller
                 'id'        => $o->id,
                 'titre'     => $o->titre,
                 'prix'      => $o->prix,
-                'image'     => $o->images->first()?->url ?? null,
+                'image'     => $o->images->first()?->url ?? ($o->images->first()?->chemin ? '/storage/' . $o->images->first()->chemin : null),
                 'categorie' => $o->categorie?->name,
             ]),
         ]]);

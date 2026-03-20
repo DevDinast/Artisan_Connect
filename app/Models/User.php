@@ -97,6 +97,16 @@ class User extends Authenticatable
         return $this->role === 'administrateur';
     }
 
+
+    public function oeuvres()
+{
+    return $this->hasManyThrough(Oeuvre::class, Artisan::class, 'user_id', 'artisan_id');
+}
+
+public function avisRecus()
+{
+    return $this->hasManyThrough(Avis::class, Artisan::class, 'user_id', 'artisan_id');
+}
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -117,4 +127,6 @@ class User extends Authenticatable
     {
         return $query->whereNotNull('email_verified_at');
     }
+
+
 }

@@ -11,19 +11,19 @@ use Illuminate\Http\Request;
 class AvisController extends Controller
 {
     public function getAvisOeuvre($id)
-    {
-        $avis = Avis::where('oeuvre_id', $id)
-            ->where('statut', 'publie')
-            ->with('acheteur.user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+{
+    $avis = Avis::whereHas('transaction', fn($q) => $q->where('oeuvre_id', $id))
+        ->where('statut', 'publie')
+        ->with('acheteur.utilisateur')
+        ->orderBy('created_at', 'desc')
+        ->paginate(10);
 
-        return response()->json([
-            'success' => true,
-            'data'    => ['avis' => $avis->items()],
-            'message' => 'Avis récupérés avec succès',
-        ], 200);
-    }
+    return response()->json([
+        'success' => true,
+        'data'    => ['avis' => $avis->items()],
+        'message' => 'Avis récupérés avec succès',
+    ], 200);
+}
 
     public function creerAvis(Request $request)
     {

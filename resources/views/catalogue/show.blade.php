@@ -4,120 +4,145 @@
 
 @section('content')
 
-<div class="container" style="max-width: 900px; margin: auto">
+<style>
+.oeuvre-detail { max-width:900px; margin:0 auto; }
+.oeuvre-layout { display:flex; flex-wrap:wrap; gap:2rem; margin-bottom:2.5rem; }
+.oeuvre-images { flex:1; min-width:280px; }
+.oeuvre-main-img { width:100%; height:380px; object-fit:cover; border-radius:12px; background:#f1f5f9; }
+.oeuvre-thumbs { display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap; }
+.oeuvre-thumb { width:65px; height:65px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid #e2e8f0; transition:border-color 0.2s; }
+.oeuvre-thumb.active, .oeuvre-thumb:hover { border-color:#0d6efd; }
+.oeuvre-info { flex:1; min-width:280px; }
+.oeuvre-categorie { display:inline-block; background:#f0f9ff; color:#0369a1; font-size:0.78rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:999px; margin-bottom:0.75rem; }
+.oeuvre-titre { font-size:1.7rem; font-weight:700; color:#1e293b; letter-spacing:-0.4px; margin-bottom:0.5rem; }
+.oeuvre-prix { font-size:1.6rem; font-weight:700; color:#0d6efd; margin-bottom:1.2rem; }
+.oeuvre-desc { color:#475569; line-height:1.7; margin-bottom:1.5rem; font-size:0.95rem; }
+.artisan-mini { background:#f8fafc; border-radius:10px; padding:1rem; display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; text-decoration:none; color:inherit; transition:background 0.2s; }
+.artisan-mini:hover { background:#eff6ff; }
+.artisan-mini-avatar { width:44px; height:44px; border-radius:50%; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; flex-shrink:0; }
+.artisan-mini-name { font-weight:700; color:#1e293b; font-size:0.95rem; }
+.artisan-mini-spe { color:#64748b; font-size:0.82rem; }
+.btn-panier { width:100%; margin-bottom:0.75rem; }
+.btn-favori { width:100%; background:white; color:#0d6efd; border:2px solid #0d6efd; padding:0.75rem; border-radius:8px; font-family:inherit; font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.btn-favori:hover { background:#eff6ff; }
+.avis-item { border-bottom:1px solid #f1f5f9; padding:1rem 0; }
+.avis-header { display:flex; justify-content:space-between; margin-bottom:0.3rem; }
+.avis-auteur { font-weight:700; color:#1e293b; font-size:0.9rem; }
+.avis-note { color:#f59e0b; }
+.avis-comment { color:#475569; font-size:0.9rem; }
+.similaires-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:1rem; }
+.sim-card { background:white; border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.06); text-decoration:none; color:inherit; transition:transform 0.2s; display:block; }
+.sim-card:hover { transform:translateY(-3px); }
+.sim-card img { width:100%; height:130px; object-fit:cover; }
+.sim-card-body { padding:0.75rem; }
+.sim-card-titre { font-weight:700; font-size:0.88rem; color:#1e293b; margin-bottom:0.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sim-card-prix { color:#0d6efd; font-weight:700; font-size:0.88rem; }
+</style>
 
-    <div id="loading" class="text-center py-12 text-gray-400">Chargement...</div>
+<div class="oeuvre-detail">
+
+    <div id="loading" style="text-align:center;padding:4rem 0;color:#64748b">Chargement...</div>
     <div id="content" style="display:none">
 
-        <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 2rem">
+        <div class="oeuvre-layout">
 
-            {{-- Image principale --}}
-            <div style="flex: 1; min-width: 280px">
-                <img id="oeuvre-image" src="" alt=""
-                     style="width:100%; border-radius: 0.75rem; object-fit: cover; max-height: 400px">
-                <div id="images-thumbnails" style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap"></div>
+            {{-- Images --}}
+            <div class="oeuvre-images">
+                <img id="main-img" class="oeuvre-main-img" src="" alt="">
+                <div class="oeuvre-thumbs" id="thumbs"></div>
             </div>
 
             {{-- Infos --}}
-            <div style="flex: 1; min-width: 280px">
-                <h1 id="oeuvre-titre" style="font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem"></h1>
-                <p id="oeuvre-categorie" class="artisan-tag" style="margin-bottom: 1rem"></p>
-                <p id="oeuvre-prix" style="font-size: 1.5rem; font-weight: 700; color: #2563eb; margin-bottom: 1rem"></p>
-                <p id="oeuvre-description" style="color: #555; line-height: 1.7; margin-bottom: 1.5rem"></p>
+            <div class="oeuvre-info">
+                <span id="oeuvre-cat" class="oeuvre-categorie"></span>
+                <h1 id="oeuvre-titre" class="oeuvre-titre"></h1>
+                <div id="oeuvre-prix" class="oeuvre-prix"></div>
+                <p id="oeuvre-desc" class="oeuvre-desc"></p>
 
-                {{-- Artisan --}}
-                <div id="artisan-card" style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem; display:flex; align-items:center; gap: 1rem">
-                    <div id="artisan-avatar" class="dashboard-avatar" style="width:3rem;height:3rem;font-size:1rem;flex-shrink:0"></div>
+                <a id="artisan-link" href="#" class="artisan-mini">
+                    <div class="artisan-mini-avatar" id="artisan-avatar"></div>
                     <div>
-                        <p id="artisan-name" style="font-weight: 600"></p>
-                        <p id="artisan-specialite" style="color: #888; font-size: 0.85rem"></p>
+                        <div class="artisan-mini-name" id="artisan-name"></div>
+                        <div class="artisan-mini-spe" id="artisan-spe"></div>
                     </div>
-                    <a id="artisan-link" href="#" class="card-link" style="margin-left:auto">Voir le profil →</a>
-                </div>
+                    <span style="margin-left:auto;color:#0d6efd;font-size:0.85rem;font-weight:600">Voir le profil →</span>
+                </a>
 
-                <button id="btn-panier" class="btn btn-full" style="margin-bottom: 0.75rem">
-                    🛒 Ajouter au panier
-                </button>
-                <button id="btn-favori" class="btn-outline" style="width:100%; padding: 0.6rem; border-radius: 0.5rem; cursor:pointer">
-                    ♡ Ajouter aux favoris
-                </button>
-
-                <div id="action-alert" style="margin-top: 0.75rem"></div>
+                <button id="btn-panier" class="btn btn-panier">🛒 Ajouter au panier</button>
+                <button id="btn-favori" class="btn-favori">♡ Ajouter aux favoris</button>
+                <div id="action-alert" style="margin-top:0.75rem"></div>
             </div>
         </div>
 
         {{-- Avis --}}
         <section class="section">
-            <div class="section-header">
-                <h2>Avis clients</h2>
-            </div>
-            <div id="avis-container">
-                <p class="text-gray-400">Chargement des avis...</p>
-            </div>
+            <div class="section-header"><h2>Avis clients</h2></div>
+            <div id="avis-container"><p style="color:#94a3b8">Chargement des avis...</p></div>
         </section>
 
-        {{-- Œuvres similaires --}}
+        {{-- Similaires --}}
         <section class="section">
-            <div class="section-header">
-                <h2>Œuvres similaires</h2>
-            </div>
-            <div id="similaires-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"></div>
+            <div class="section-header"><h2>Œuvres similaires</h2></div>
+            <div class="similaires-grid" id="similaires-grid"></div>
         </section>
 
     </div>
 
-    <div style="margin-top: 2rem">
-        <a href="{{ route('catalogue.categories') }}" class="card-link">← Retour au catalogue</a>
+    <div style="margin-top:2rem">
+        <a href="/catalogue" class="card-link">← Retour au catalogue</a>
     </div>
 </div>
 
 <script>
 const oeuvreId = {{ $id }};
 const token    = localStorage.getItem('token');
+const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
-const authHeaders = {
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${token}`,
-};
+function imgSrc(images) {
+    if (!images?.length) return 'https://via.placeholder.com/600x400?text=Oeuvre';
+    const i = images[0];
+    return i.url ?? (i.chemin ? `/storage/${i.chemin}` : 'https://via.placeholder.com/600x400?text=Oeuvre');
+}
+
+function showAlert(msg, type = 'error') {
+    document.getElementById('action-alert').innerHTML =
+        `<div class="alert alert-${type}"><ul><li>${msg}</li></ul></div>`;
+}
 
 async function loadOeuvre() {
     try {
-        const res  = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}`, {
-            headers: { 'Accept': 'application/json' }
-        });
+        const res  = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}`, { headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('Œuvre non trouvée');
         const json = await res.json();
         const o    = json.data ?? json;
 
-        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
 
-        document.getElementById('oeuvre-titre').textContent      = o.titre;
-        document.getElementById('oeuvre-categorie').textContent  = o.categorie?.nom ?? '';
-        document.getElementById('oeuvre-prix').textContent       = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
-        document.getElementById('oeuvre-description').textContent = o.description ?? '';
+        document.getElementById('oeuvre-titre').textContent = o.titre;
+        document.getElementById('oeuvre-cat').textContent   = o.categorie?.nom ?? '';
+        document.getElementById('oeuvre-prix').textContent  = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
+        document.getElementById('oeuvre-desc').textContent  = o.description ?? '';
 
-        // Images
-        const images = o.images ?? [];
-        if (images.length) {
-            document.getElementById('oeuvre-image').src = images[0].url;
-            if (images.length > 1) {
-                document.getElementById('images-thumbnails').innerHTML = images.map((img, i) => `
-                    <img src="${img.url}" onclick="document.getElementById('oeuvre-image').src='${img.url}'"
-                         style="width:60px;height:60px;object-fit:cover;border-radius:0.25rem;cursor:pointer;border:2px solid ${i===0?'#2563eb':'#eee'}">
-                `).join('');
-            }
-        } else {
-            document.getElementById('oeuvre-image').src = 'https://via.placeholder.com/600x400?text=Oeuvre';
+        const images  = o.images ?? [];
+        const mainImg = document.getElementById('main-img');
+        mainImg.src   = imgSrc(images);
+        mainImg.alt   = o.titre;
+
+        if (images.length > 1) {
+            document.getElementById('thumbs').innerHTML = images.map((img, i) => {
+                const src = img.url ?? (img.chemin ? `/storage/${img.chemin}` : '');
+                return `<img src="${src}" class="oeuvre-thumb ${i===0?'active':''}"
+                    onclick="document.getElementById('main-img').src='${src}';document.querySelectorAll('.oeuvre-thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')">`;
+            }).join('');
         }
 
-        // Artisan
         if (o.artisan) {
             const initiales = o.artisan.name?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) ?? 'A';
             document.getElementById('artisan-avatar').textContent = initiales;
-            document.getElementById('artisan-name').textContent   = o.artisan.name;
-            document.getElementById('artisan-specialite').textContent = o.artisan.specialite ?? '';
-            document.getElementById('artisan-link').href = `/catalogue/artisans/${o.artisan.id}`;
+            document.getElementById('artisan-name').textContent   = o.artisan.name ?? '';
+            document.getElementById('artisan-spe').textContent    = o.artisan.specialite ?? '';
+            document.getElementById('artisan-link').href          = `/catalogue/artisans/${o.artisan.id}`;
         }
 
         loadAvis();
@@ -132,114 +157,120 @@ async function loadOeuvre() {
 async function loadAvis() {
     const container = document.getElementById('avis-container');
     try {
-        const res  = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}/avis`, {
-            headers: { 'Accept': 'application/json' }
-        });
+        const res  = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}/avis`, { headers: { 'Accept': 'application/json' } });
         const json = await res.json();
-        const avis = json.data ?? json;
+        const avis = json.data?.avis ?? json.data ?? json;
 
         if (!Array.isArray(avis) || !avis.length) {
-            container.innerHTML = '<p class="text-gray-400">Aucun avis pour cette œuvre.</p>';
+            container.innerHTML = '<p style="color:#94a3b8">Aucun avis pour cette œuvre.</p>';
             return;
         }
-
         container.innerHTML = avis.map(a => `
-            <div style="border-bottom: 1px solid #eee; padding: 1rem 0">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem">
-                    <strong>${a.user?.name ?? 'Anonyme'}</strong>
-                    <span style="color:#f59e0b">${'⭐'.repeat(a.note ?? 0)}</span>
+            <div class="avis-item">
+                <div class="avis-header">
+                    <span class="avis-auteur">${a.acheteur?.utilisateur?.name ?? 'Anonyme'}</span>
+                    <span class="avis-note">${'⭐'.repeat(a.note ?? 0)}</span>
                 </div>
-                <p style="color:#555">${a.commentaire ?? ''}</p>
-            </div>
-        `).join('');
-
+                <p class="avis-comment">${a.commentaire ?? ''}</p>
+            </div>`).join('');
     } catch (e) {
-        container.innerHTML = '<p class="text-gray-400">Avis non disponibles.</p>';
+        container.innerHTML = '<p style="color:#94a3b8">Avis non disponibles.</p>';
     }
 }
 
 async function loadSimilaires() {
     const grid = document.getElementById('similaires-grid');
     try {
-        const res     = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}/similar`, {
-            headers: { 'Accept': 'application/json' }
-        });
+        const res     = await fetch(`/api/v1/catalog/oeuvres/${oeuvreId}/similar`, { headers: { 'Accept': 'application/json' } });
         const json    = await res.json();
-        const oeuvres = json.data ?? json;
+        const oeuvres = json.data ?? [];
 
         if (!Array.isArray(oeuvres) || !oeuvres.length) {
-            grid.innerHTML = '<p class="text-gray-400">Aucune œuvre similaire.</p>';
+            grid.innerHTML = '<p style="color:#94a3b8">Aucune œuvre similaire.</p>';
             return;
         }
-
         grid.innerHTML = oeuvres.map(o => `
-            <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                <img src="${o.image ?? 'https://via.placeholder.com/400x300'}" class="w-full h-40 object-cover">
-                <div class="p-3">
-                    <h3 class="font-semibold mb-1">${o.titre}</h3>
-                    <p class="text-gray-800 font-bold mb-2">${Number(o.prix).toLocaleString('fr-FR')} FCFA</p>
-                    <a href="{{ route('catalogue.oeuvre', '') }}/${o.id}"
-                       class="block text-center bg-blue-500 text-white py-1 rounded hover:bg-blue-600 transition text-sm">
-                        Voir
-                    </a>
+            <a href="/catalogue/oeuvres/${o.id}" class="sim-card">
+                <img src="${o.image ?? 'https://via.placeholder.com/400x300?text=Oeuvre'}" alt="${o.titre}" onerror="this.src='https://via.placeholder.com/400x300'">
+                <div class="sim-card-body">
+                    <div class="sim-card-titre">${o.titre}</div>
+                    <div class="sim-card-prix">${Number(o.prix).toLocaleString('fr-FR')} FCFA</div>
                 </div>
-            </div>
-        `).join('');
-
-    } catch (e) {
-        console.error(e);
-    }
+            </a>`).join('');
+    } catch (e) { console.error(e); }
 }
 
-// Ajouter au panier
+async function getXsrf() {
+    await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+    return decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
+}
+
+// ── Ajouter au panier ─────────────────────────────────────────────────────────
 document.getElementById('btn-panier').addEventListener('click', async function() {
-    const alertBox = document.getElementById('action-alert');
     if (!token) {
-        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Connectez-vous pour ajouter au panier.</li></ul></div>`;
+        showAlert('Connectez-vous pour ajouter au panier. <a href="/auth/login" style="font-weight:700">Se connecter →</a>');
         return;
     }
+    this.disabled    = true;
+    this.textContent = 'Ajout en cours...';
+    const xsrf = await getXsrf();
     try {
-        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
-        const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
-
-        const res = await fetch('/api/v1/acheteur/panier', {
+        const res  = await fetch('/api/v1/acheteur/panier', {
             method: 'POST',
             headers: { ...authHeaders, 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
             credentials: 'include',
             body: JSON.stringify({ oeuvre_id: oeuvreId, quantite: 1 }),
         });
         const json = await res.json();
-        alertBox.innerHTML = res.ok
-            ? `<div class="alert alert-success"><ul><li>Ajouté au panier ✓</li></ul></div>`
-            : `<div class="alert alert-error"><ul><li>${json.message ?? 'Erreur.'}</li></ul></div>`;
+        if (res.ok) {
+            // ✅ Lien vers le panier après ajout
+            showAlert(
+                'Ajouté au panier ✓ &nbsp;—&nbsp; <a href="/panier" style="font-weight:700;color:#15803d">Voir mon panier →</a>',
+                'success'
+            );
+            this.textContent = '✓ Dans le panier';
+        } else {
+            showAlert(json.message ?? 'Erreur.');
+            this.disabled    = false;
+            this.textContent = '🛒 Ajouter au panier';
+        }
     } catch (e) {
-        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau.</li></ul></div>`;
+        showAlert('Erreur réseau.');
+        this.disabled    = false;
+        this.textContent = '🛒 Ajouter au panier';
     }
 });
 
-// Ajouter aux favoris
+// ── Ajouter aux favoris ───────────────────────────────────────────────────────
 document.getElementById('btn-favori').addEventListener('click', async function() {
-    const alertBox = document.getElementById('action-alert');
     if (!token) {
-        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Connectez-vous pour ajouter aux favoris.</li></ul></div>`;
+        showAlert('Connectez-vous pour ajouter aux favoris. <a href="/auth/login" style="font-weight:700">Se connecter →</a>');
         return;
     }
+    this.disabled    = true;
+    this.textContent = 'Ajout en cours...';
+    const xsrf = await getXsrf();
     try {
-        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
-        const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
-
-        const res = await fetch('/api/v1/acheteur/favoris', {
+        const res  = await fetch('/api/v1/acheteur/favoris', {
             method: 'POST',
             headers: { ...authHeaders, 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
             credentials: 'include',
             body: JSON.stringify({ oeuvre_id: oeuvreId }),
         });
         const json = await res.json();
-        alertBox.innerHTML = res.ok
-            ? `<div class="alert alert-success"><ul><li>Ajouté aux favoris ✓</li></ul></div>`
-            : `<div class="alert alert-error"><ul><li>${json.message ?? 'Erreur.'}</li></ul></div>`;
+        if (res.ok) {
+            // ✅ Confirmation favoris
+            showAlert('Ajouté aux favoris ✓', 'success');
+            this.textContent = '♥ Dans vos favoris';
+        } else {
+            showAlert(json.message ?? 'Erreur.');
+            this.disabled    = false;
+            this.textContent = '♡ Ajouter aux favoris';
+        }
     } catch (e) {
-        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau.</li></ul></div>`;
+        showAlert('Erreur réseau.');
+        this.disabled    = false;
+        this.textContent = '♡ Ajouter aux favoris';
     }
 });
 

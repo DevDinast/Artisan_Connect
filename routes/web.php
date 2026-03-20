@@ -13,10 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn() => view('home'))->name('home');
 Route::get('/catalogue', fn() => view('catalogue.categories'))->name('catalogue.categories');
 Route::get('/catalogue/oeuvres/{id}', fn($id) => view('catalogue.show', ['id' => $id]))->name('catalogue.oeuvre');
-
-// Profil public artisan — charge le modèle User et le passe à la vue
 Route::get('/catalogue/artisans/{id}', function ($id) {
-    $artisan = User::where('role', 'artisan')->findOrFail($id);
+    $artisan = User::where('role', 'artisan')->with('artisan')->findOrFail($id);
     return view('catalogue.artisan', ['artisan' => $artisan]);
 })->name('catalogue.artisan');
 
@@ -36,6 +34,16 @@ Route::get('/login',         fn() => view('auth.login'))->name('login');
 */
 Route::get('/dashboard/acheteur', fn() => view('acheteur.dashboard'))->name('dashboard.acheteur');
 Route::get('/dashboard/artisan',  fn() => view('artisan.dashboard'))->name('dashboard.artisan');
+Route::get('/dashboard/admin',    fn() => view('admin.dashboard'))->name('dashboard.admin');
+
+/*
+|--------------------------------------------------------------------------
+| Acheteur — flux d'achat
+|--------------------------------------------------------------------------
+*/
+Route::get('/panier',              fn() => view('acheteur.panier'))->name('acheteur.panier');
+Route::get('/commandes',           fn() => view('acheteur.commandes'))->name('acheteur.commandes');
+Route::get('/commandes/{id}',      fn($id) => view('acheteur.commande-detail', ['id' => $id]))->name('acheteur.commande.detail');
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +71,3 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
     $role = $request->user()->role;
     return redirect($role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur');
 })->middleware(['auth', 'signed'])->name('verification.verify');
-
-// Dans web.php
-Route::get('/dashboard/admin', fn() => view('admin.dashboard'))->name('dashboard.admin');

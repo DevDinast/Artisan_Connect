@@ -4,71 +4,99 @@
 
 @section('content')
 
-{{-- En-tête --}}
-<div style="text-align:center; margin-bottom:2rem">
+<style>
+.catalogue-header { text-align:center; margin-bottom:2rem; }
+.catalogue-header h1 { font-size:2rem; font-weight:700; color:#1e293b; letter-spacing:-0.5px; margin-bottom:0.4rem; }
+.catalogue-header p { color:#64748b; font-size:1rem; }
+
+.filtres-bar {
+    background:white; border-radius:12px; padding:1.25rem 1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:2rem;
+    display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+}
+.filtres-bar input,
+.filtres-bar select {
+    padding:0.65rem 1rem; border:2px solid #e2e8f0; border-radius:8px;
+    font-family:inherit; font-size:0.9rem; color:#374151; outline:none;
+    transition:border-color 0.2s; background:white;
+}
+.filtres-bar input { flex:1; min-width:200px; }
+.filtres-bar input:focus, .filtres-bar select:focus { border-color:#0d6efd; }
+.filtres-bar select { min-width:160px; cursor:pointer; }
+
+.catalogue-compteur { color:#64748b; font-size:0.88rem; margin-bottom:1rem; }
+
+.oeuvres-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    gap:1.5rem;
+}
+
+.oeuvre-card {
+    background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);
+    overflow:hidden; transition:transform 0.2s,box-shadow 0.2s;
+    text-decoration:none; color:inherit; display:block;
+}
+.oeuvre-card:hover { transform:translateY(-5px); box-shadow:0 12px 28px rgba(0,0,0,0.12); }
+.oeuvre-card-img { position:relative; height:210px; overflow:hidden; background:#f1f5f9; }
+.oeuvre-card-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s; }
+.oeuvre-card:hover .oeuvre-card-img img { transform:scale(1.07); }
+.oeuvre-card-badge {
+    position:absolute; top:0.65rem; left:0.65rem;
+    background:rgba(255,255,255,0.92); color:#0369a1;
+    font-size:0.7rem; font-weight:700; padding:0.2rem 0.55rem;
+    border-radius:999px; letter-spacing:0.3px; text-transform:uppercase;
+}
+.oeuvre-card-body { padding:1rem 1.1rem 1.2rem; }
+.oeuvre-card-titre { font-size:0.97rem; font-weight:700; color:#1e293b; margin-bottom:0.3rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.oeuvre-card-artisan { font-size:0.8rem; color:#64748b; margin-bottom:0.6rem; }
+.oeuvre-card-footer { display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid #f1f5f9; }
+.oeuvre-card-prix { font-size:1rem; font-weight:700; color:#0d6efd; }
+.oeuvre-card-btn { font-size:0.78rem; font-weight:600; color:#0d6efd; background:#eff6ff; padding:0.3rem 0.7rem; border-radius:6px; }
+
+.catalogue-loading { text-align:center; padding:4rem 0; color:#64748b; }
+.catalogue-empty { text-align:center; padding:4rem 2rem; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+
+.catalogue-pagination { display:flex; justify-content:center; gap:0.5rem; margin-top:2.5rem; flex-wrap:wrap; }
+.page-btn { padding:0.5rem 0.9rem; border-radius:8px; border:2px solid #e2e8f0; background:white; color:#374151; font-family:inherit; font-size:0.88rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.page-btn:hover { border-color:#0d6efd; color:#0d6efd; }
+.page-btn.active { background:#0d6efd; border-color:#0d6efd; color:white; }
+</style>
+
+<div class="catalogue-header">
     <span class="hero-badge">✦ Collection artisanale</span>
-    <h1 style="font-size:2rem;font-weight:700;letter-spacing:-0.5px;margin-bottom:0.5rem">
-        Catalogue des œuvres
-    </h1>
-    <p style="color:#64748b;font-size:1rem;max-width:500px;margin:0 auto">
-        Explorez des créations uniques faites main par nos artisans.
-    </p>
+    <h1>Catalogue des œuvres</h1>
+    <p>Explorez des créations uniques faites main par nos artisans.</p>
 </div>
 
-{{-- Barre de filtres --}}
-<div style="background:white;border-radius:12px;padding:1.25rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:2rem;display:flex;flex-wrap:wrap;gap:1rem;align-items:center">
-
-    <input
-        id="search"
-        type="text"
-        placeholder="🔍 Rechercher une œuvre..."
-        style="flex:1;min-width:200px;padding:0.65rem 1rem;border:2px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;transition:border-color 0.2s"
-        onfocus="this.style.borderColor='#0d6efd'"
-        onblur="this.style.borderColor='#e2e8f0'"
-    >
-
-    <select id="categorie"
-        style="padding:0.65rem 1rem;border:2px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#374151;outline:none;cursor:pointer;min-width:160px">
+<div class="filtres-bar">
+    <input id="search" type="text" placeholder="🔍 Rechercher une œuvre...">
+    <select id="categorie">
         <option value="">Toutes les catégories</option>
     </select>
-
-    <select id="tri"
-        style="padding:0.65rem 1rem;border:2px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#374151;outline:none;cursor:pointer;min-width:160px">
+    <select id="tri">
         <option value="">Trier par défaut</option>
         <option value="recent">Plus récentes</option>
         <option value="prix_asc">Prix croissant</option>
         <option value="prix_desc">Prix décroissant</option>
     </select>
-
 </div>
 
-{{-- États --}}
-<div id="loading" style="text-align:center;padding:4rem 0;color:#64748b">
-    <div style="font-size:2rem;margin-bottom:0.5rem">⏳</div>
-    Chargement des œuvres...
+<p class="catalogue-compteur" id="compteur" style="display:none"></p>
+
+<div class="catalogue-loading" id="loading">Chargement des œuvres...</div>
+
+<div class="catalogue-empty" id="empty" style="display:none">
+    <span style="font-size:3rem;display:block;margin-bottom:1rem">🎨</span>
+    <h3 style="font-weight:700;color:#1e293b;margin-bottom:0.4rem">Aucune œuvre trouvée</h3>
+    <p style="color:#64748b">Essayez de modifier vos critères de recherche.</p>
 </div>
 
-<div id="empty" style="display:none;text-align:center;padding:4rem 0;color:#64748b">
-    <div style="font-size:3rem;margin-bottom:1rem">🎨</div>
-    <h3 style="font-weight:700;color:#1e293b;margin-bottom:0.5rem">Aucune œuvre trouvée</h3>
-    <p>Essayez de modifier vos filtres de recherche.</p>
-</div>
+<div class="oeuvres-grid" id="catalogue-grid"></div>
+<div class="catalogue-pagination" id="pagination"></div>
 
-{{-- Compteur --}}
-<div id="compteur" style="display:none;margin-bottom:1rem;color:#64748b;font-size:0.9rem"></div>
-
-{{-- Grille catalogue --}}
-<div id="catalogue-grid" style="
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.5rem;
-"></div>
-
-{{-- Pagination --}}
-<div id="pagination" style="display:flex;justify-content:center;gap:0.5rem;margin-top:2.5rem"></div>
-
-<div style="margin-top:2rem;text-align:center">
-    <a href="{{ route('dashboard.acheteur') }}" class="btn-outline">Mon espace acheteur →</a>
+<div style="margin-top:2.5rem;text-align:center">
+    <a href="/dashboard/acheteur" class="btn-outline">Mon espace acheteur →</a>
 </div>
 
 <script>
@@ -80,26 +108,30 @@ const loading         = document.getElementById('loading');
 const empty           = document.getElementById('empty');
 const compteur        = document.getElementById('compteur');
 const pagination      = document.getElementById('pagination');
-
 let debounceTimer = null;
 let currentPage   = 1;
 
-// ── Charger les catégories ────────────────────────────────────────────────────
 async function loadCategories() {
     try {
         const res  = await fetch('/api/v1/catalog/categories', { headers: { 'Accept': 'application/json' } });
         const json = await res.json();
-        const cats = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+        const cats = Array.isArray(json.data) ? json.data : [];
         cats.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.id;
-            opt.textContent = c.nom ?? c.name;
+            opt.textContent = c.name ?? c.nom;
             categorieSelect.appendChild(opt);
         });
     } catch (e) { console.error(e); }
 }
 
-// ── Charger les œuvres ────────────────────────────────────────────────────────
+function imageUrl(o) {
+    if (o.image) return o.image;
+    if (o.images?.[0]?.url) return o.images[0].url;
+    if (o.images?.[0]?.chemin) return `/storage/${o.images[0].chemin}`;
+    return 'https://via.placeholder.com/400x280?text=Oeuvre';
+}
+
 async function loadOeuvres(page = 1) {
     loading.style.display = 'block';
     empty.style.display   = 'none';
@@ -115,8 +147,8 @@ async function loadOeuvres(page = 1) {
     params.set('page', page);
 
     try {
-        const res  = await fetch(`/api/v1/catalog/oeuvres?${params}`, { headers: { 'Accept': 'application/json' } });
-        const json = await res.json();
+        const res     = await fetch(`/api/v1/catalog/oeuvres?${params}`, { headers: { 'Accept': 'application/json' } });
+        const json    = await res.json();
         const oeuvres = json.data ?? [];
         const meta    = json.meta ?? {};
 
@@ -127,86 +159,51 @@ async function loadOeuvres(page = 1) {
             return;
         }
 
-        // Compteur
         if (meta.total) {
             compteur.style.display = 'block';
             compteur.textContent   = `${meta.total} œuvre${meta.total > 1 ? 's' : ''} trouvée${meta.total > 1 ? 's' : ''}`;
         }
 
-        // Cartes
         grid.innerHTML = oeuvres.map(o => {
-            const image     = o.image ?? (o.images?.[0]?.chemin ? `/storage/${o.images[0].chemin}` : null);
-            const imgSrc    = image ?? 'https://via.placeholder.com/400x300?text=Oeuvre';
+            const img       = imageUrl(o);
             const prix      = Number(o.prix).toLocaleString('fr-FR');
             const categorie = o.categorie?.nom ?? o.categorie?.name ?? '';
+            const artisan   = o.artisan?.name ?? '';
 
             return `
-            <a href="{{ route('catalogue.oeuvre', '') }}/${o.id}"
-               style="text-decoration:none;color:inherit;display:block;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s"
-               onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'"
-               onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'">
-
-                {{-- Image --}}
-                <div style="position:relative;overflow:hidden;height:200px;background:#f1f5f9">
-                    <img src="${imgSrc}" alt="${o.titre}"
-                         style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s"
-                         onmouseover="this.style.transform='scale(1.05)'"
-                         onmouseout="this.style.transform=''"
-                         onerror="this.src='https://via.placeholder.com/400x300?text=Oeuvre'">
-                    ${categorie ? `
-                    <span style="position:absolute;top:0.75rem;left:0.75rem;background:rgba(255,255,255,0.92);color:#0369a1;font-size:0.72rem;font-weight:600;padding:0.2rem 0.6rem;border-radius:999px;backdrop-filter:blur(4px)">
-                        ${categorie}
-                    </span>` : ''}
+            <a href="/catalogue/oeuvres/${o.id}" class="oeuvre-card">
+                <div class="oeuvre-card-img">
+                    <img src="${img}" alt="${o.titre}" onerror="this.src='https://via.placeholder.com/400x280?text=Oeuvre'">
+                    ${categorie ? `<span class="oeuvre-card-badge">${categorie}</span>` : ''}
                 </div>
-
-                {{-- Infos --}}
-                <div style="padding:1rem 1.1rem 1.2rem">
-                    <h3 style="font-size:0.98rem;font-weight:700;color:#1e293b;margin-bottom:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                        ${o.titre}
-                    </h3>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
-                        <span style="font-size:1.05rem;font-weight:700;color:#0d6efd">${prix} FCFA</span>
-                        <span style="font-size:0.78rem;color:#64748b;background:#f1f5f9;padding:0.2rem 0.5rem;border-radius:6px">
-                            ${o.artisan?.name ?? ''}
-                        </span>
-                    </div>
-                    <div style="margin-top:0.9rem;text-align:center;background:#eff6ff;color:#0d6efd;padding:0.5rem;border-radius:7px;font-size:0.85rem;font-weight:600">
-                        Voir les détails →
+                <div class="oeuvre-card-body">
+                    <div class="oeuvre-card-titre">${o.titre}</div>
+                    ${artisan ? `<div class="oeuvre-card-artisan">par ${artisan}</div>` : ''}
+                    <div class="oeuvre-card-footer">
+                        <span class="oeuvre-card-prix">${prix} FCFA</span>
+                        <span class="oeuvre-card-btn">Voir →</span>
                     </div>
                 </div>
             </a>`;
         }).join('');
 
-        // Pagination
         if (meta.last_page > 1) {
             for (let i = 1; i <= meta.last_page; i++) {
                 const btn = document.createElement('button');
                 btn.textContent = i;
-                btn.style.cssText = `
-                    padding: 0.5rem 0.9rem;
-                    border-radius: 8px;
-                    border: 2px solid ${i === page ? '#0d6efd' : '#e2e8f0'};
-                    background: ${i === page ? '#0d6efd' : 'white'};
-                    color: ${i === page ? 'white' : '#374151'};
-                    font-family: inherit;
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                `;
-                btn.addEventListener('click', () => { currentPage = i; loadOeuvres(i); window.scrollTo(0, 0); });
+                btn.className   = 'page-btn' + (i === page ? ' active' : '');
+                btn.addEventListener('click', () => { currentPage = i; loadOeuvres(i); window.scrollTo({top:0,behavior:'smooth'}); });
                 pagination.appendChild(btn);
             }
         }
 
     } catch (e) {
         loading.style.display = 'none';
-        grid.innerHTML = '<p style="color:#ef4444;grid-column:1/-1;text-align:center">Erreur lors du chargement des œuvres.</p>';
+        grid.innerHTML = '<p style="color:#ef4444;grid-column:1/-1;text-align:center">Erreur de chargement.</p>';
         console.error(e);
     }
 }
 
-// ── Listeners ────────────────────────────────────────────────────────────────
 searchInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => { currentPage = 1; loadOeuvres(1); }, 400);
@@ -214,7 +211,6 @@ searchInput.addEventListener('input', () => {
 categorieSelect.addEventListener('change', () => { currentPage = 1; loadOeuvres(1); });
 triSelect.addEventListener('change',       () => { currentPage = 1; loadOeuvres(1); });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 loadCategories();
 loadOeuvres(1);
 </script>
