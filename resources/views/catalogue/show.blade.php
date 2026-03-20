@@ -95,8 +95,8 @@
 
 <script>
 const oeuvreId = {{ $id }};
-const token    = localStorage.getItem('token');
-const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
+const authToken    = localStorage.getItem('token');
+const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` };
 
 function imgSrc(images) {
     if (!images?.length) return 'https://via.placeholder.com/600x400?text=Oeuvre';
@@ -207,7 +207,7 @@ async function getXsrf() {
 
 // ── Ajouter au panier ─────────────────────────────────────────────────────────
 document.getElementById('btn-panier').addEventListener('click', async function() {
-    if (!token) {
+    if (!authToken) {
         showAlert('Connectez-vous pour ajouter au panier. <a href="/auth/login" style="font-weight:700">Se connecter →</a>');
         return;
     }
@@ -243,7 +243,7 @@ document.getElementById('btn-panier').addEventListener('click', async function()
 
 // ── Ajouter aux favoris ───────────────────────────────────────────────────────
 document.getElementById('btn-favori').addEventListener('click', async function() {
-    if (!token) {
+    if (!authToken) {
         showAlert('Connectez-vous pour ajouter aux favoris. <a href="/auth/login" style="font-weight:700">Se connecter →</a>');
         return;
     }

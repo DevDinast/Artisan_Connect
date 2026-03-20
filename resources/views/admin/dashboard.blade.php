@@ -63,8 +63,8 @@
 </div>
 
 <script>
-const token = localStorage.getItem('token');
-const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
+const authToken = localStorage.getItem('token');
+const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` };
 let oeuvreARefuserID = null;
 
 // ── Stats admin ───────────────────────────────────────────────────────────────

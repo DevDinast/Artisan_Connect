@@ -124,7 +124,7 @@
     </footer>
 
     <script>
-    const token = localStorage.getItem('token');
+    var token = localStorage.getItem('token');
 
     // ── Initialiser la navbar selon l'état de connexion ───────────────────────
     async function initNavbar() {
