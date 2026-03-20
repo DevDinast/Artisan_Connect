@@ -86,7 +86,7 @@ class TransactionService
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Erreur lors de la création de la commande.'];
+            return ['success' => false, 'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()];
         }
     }
 
@@ -112,7 +112,7 @@ class TransactionService
 
             // Notifier l'artisan
             Notification::create([
-                'user_id' => $artisan->user_id,
+                'user_id' => \App\Models\Artisan::find($artisan->id)?->user_id,
                 'type'    => 'paiement_recu',
                 'titre'   => 'Paiement reçu !',
                 'message' => "Paiement confirmé pour \"{$oeuvre->titre}\". Montant : {$transaction->montant_artisan} FCFA.",
@@ -121,7 +121,7 @@ class TransactionService
 
             // Notifier l'acheteur
             Notification::create([
-                'user_id' => $transaction->acheteur->user_id,
+                'user_id' => \App\Models\Acheteur::find($transaction->acheteur_id)?->user_id,
                 'type'    => 'commande_confirmee',
                 'titre'   => 'Commande confirmée !',
                 'message' => "Votre commande pour \"{$oeuvre->titre}\" a été confirmée.",
@@ -134,7 +134,7 @@ class TransactionService
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Erreur lors de la confirmation du paiement.'];
+            return ['success' => false, 'message' => $e->getMessage(), 'line' => $e->getLine()];
         }
     }
 }

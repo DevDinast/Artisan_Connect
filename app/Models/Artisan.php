@@ -41,10 +41,15 @@ class Artisan extends Model
     /**
      * Get the user that owns the artisan profile.
      */
-    public function utilisateur()
-    {
-        return $this->belongsTo(User::class, 'User_id');
-    }
+    public function user()
+{
+    return $this->belongsTo(User::class, 'user_id');
+}
+
+public function utilisateur()
+{
+    return $this->belongsTo(User::class, 'user_id');
+}
 
     /**
      * Get the oeuvres for the artisan.

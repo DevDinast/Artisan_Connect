@@ -18,7 +18,7 @@ class Transaction extends Model
         'artisan_id',
         'quantite',
         'montant_total',
-        'commission',
+        'commission_plateforme',
         'montant_artisan',
         'statut',
         'mode_paiement',
@@ -29,7 +29,7 @@ class Transaction extends Model
     {
         return [
             'montant_total' => 'decimal:2',
-            'commission' => 'decimal:2',
+            'commission_plateforme' => 'decimal:2',
             'montant_artisan' => 'decimal:2',
             'quantite' => 'integer',
             'adresse_livraison' => 'array',

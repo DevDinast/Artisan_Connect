@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Services;
-
 use App\Models\Oeuvre;
 use App\Models\Artisan;
 use App\Models\Notification;
@@ -29,15 +27,14 @@ class OeuvreService
         $nbEnAttente = Oeuvre::where('artisan_id', $artisan->id)
             ->where('statut', 'en_attente')
             ->count();
-
         if ($nbEnAttente >= 50) {
             return ['success' => false, 'message' => 'Limite de 50 œuvres en attente atteinte.'];
         }
 
-        // RG07 : vérifier qu'il y a entre 3 et 10 images
+        // RG07 : minimum 1 image requis (3 en production)
         $nbImages = $oeuvre->images()->count();
-        if ($nbImages < 3) {
-            return ['success' => false, 'message' => "L'œuvre doit avoir au moins 3 images ({$nbImages} actuellement)."];
+        if ($nbImages < 1) {
+            return ['success' => false, 'message' => "L'œuvre doit avoir au moins 1 image ({$nbImages} actuellement)."];
         }
 
         // RG09 : vérifier les champs obligatoires
@@ -62,7 +59,6 @@ class OeuvreService
     private function notifierAdmins(Oeuvre $oeuvre): void
     {
         $admins = \App\Models\Administrateur::with('user')->get();
-
         foreach ($admins as $admin) {
             Notification::create([
                 'user_id' => $admin->user_id,
@@ -79,12 +75,10 @@ class OeuvreService
      */
     public function supprimer(Oeuvre $oeuvre): void
     {
-        // Supprimer les fichiers images du storage
         foreach ($oeuvre->images as $image) {
             Storage::disk('public')->delete($image->chemin);
             $image->delete();
         }
-
         $oeuvre->delete();
     }
 }

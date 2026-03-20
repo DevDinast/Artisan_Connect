@@ -19,7 +19,7 @@
 
             <div class="role-selector">
                 <label class="role-option">
-                    <input type="radio" name="role" value="acheteur" required>
+                    <input type="radio" name="role" value="acheteur">
                     <div class="role-card">
                         <span class="role-emoji">🛍️</span>
                         <strong>Acheteur</strong>
@@ -27,7 +27,7 @@
                     </div>
                 </label>
                 <label class="role-option">
-                    <input type="radio" name="role" value="artisan" required>
+                    <input type="radio" name="role" value="artisan">
                     <div class="role-card">
                         <span class="role-emoji">🎨</span>
                         <strong>Artisan</strong>
@@ -70,25 +70,28 @@
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const btn = document.getElementById('submitBtn');
+    const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled = true;
+    btn.disabled   = true;
     btn.textContent = 'Inscription...';
     alertBox.innerHTML = '';
 
-    try {
-        // Étape 1 : récupérer le cookie CSRF de Sanctum
-        await fetch('/sanctum/csrf-cookie', {
-            method: 'GET',
-            credentials: 'include',
-        });
+    // Validation du rôle côté JS
+    const role = this.querySelector('input[name="role"]:checked')?.value;
+    if (!role) {
+        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Veuillez choisir un rôle (Acheteur ou Artisan).</li></ul></div>`;
+        btn.disabled = false;
+        btn.textContent = "S'inscrire";
+        return;
+    }
 
-        // Étape 2 : lire le token XSRF dans les cookies
+    try {
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+
         const xsrfToken = decodeURIComponent(
             document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
         );
 
-        // Étape 3 : envoyer le formulaire
         const formData = new FormData(this);
 
         const response = await fetch('/api/v1/auth/register', {
@@ -108,19 +111,30 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             if (data.errors) {
                 messages = Object.values(data.errors).flat().map(e => `<li>${e}</li>`).join('');
             } else {
-                messages = `<li>${data.detail || data.message || data.error || 'Une erreur est survenue.'}</li>`;
+                messages = `<li>${data.message || 'Une erreur est survenue.'}</li>`;
             }
             alertBox.innerHTML = `<div class="alert alert-error"><ul>${messages}</ul></div>`;
             return;
         }
 
-        localStorage.setItem('token', data.token);
+        // ✅ Le contrôleur retourne { success, data: { user, token }, message }
+        const token    = data.data?.token ?? data.token;
+        const userRole = data.data?.user?.role ?? data.user?.role;
 
-        const role = data.user?.role;
-        window.location.href = role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur';
+        if (token) localStorage.setItem('token', token);
+
+        // ✅ Redirection selon le rôle
+        if (userRole === 'artisan') {
+            window.location.href = '/dashboard/artisan';
+        } else if (userRole === 'administrateur') {
+            window.location.href = '/dashboard/admin';
+        } else {
+            window.location.href = '/dashboard/acheteur';
+        }
 
     } catch (err) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau. Réessayez.</li></ul></div>`;
+        console.error(err);
     } finally {
         btn.disabled = false;
         btn.textContent = "S'inscrire";

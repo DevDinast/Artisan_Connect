@@ -12,7 +12,7 @@ class Notification extends Model
     protected $table = 'notifications';
 
     protected $fillable = [
-        'utilisateur_id',
+        'user_id',
         'type',
         'titre',
         'message',
@@ -29,7 +29,7 @@ class Notification extends Model
 
     public function utilisateur()
     {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
+        return $this->belongsTo(Utilisateur::class, 'user_id');
     }
 
     public function scopeUnread($query)
