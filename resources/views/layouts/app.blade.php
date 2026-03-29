@@ -18,6 +18,9 @@
                 <span></span><span></span><span></span>
             </button>
 
+            <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
             <ul class="nav-links" id="nav-links">
 
                 <li><a href="{{ route('catalogue.categories') }}">Catalogue</a></li>
