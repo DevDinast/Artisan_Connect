@@ -1,46 +1,31 @@
 @extends('layouts.app')
-
 @section('title', 'Mon espace - ArtisanConnect')
-
 @section('content')
 
 <style>
-.dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1.2rem; }
-.cat-card {
-    background:white; border-radius:12px; padding:1.4rem;
-    box-shadow:0 2px 8px rgba(0,0,0,0.06);
-    transition:transform 0.2s,box-shadow 0.2s;
-    text-decoration:none; color:inherit; display:block;
-}
-.cat-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.1); }
-.cat-icon { font-size:2rem; margin-bottom:0.5rem; }
-.cat-name { font-weight:700; color:#1e293b; font-size:1rem; margin-bottom:0.3rem; }
-.cat-desc { color:#64748b; font-size:0.85rem; flex:1; }
-.cat-link { display:inline-block; margin-top:0.75rem; color:#0d6efd; font-size:0.85rem; font-weight:600; }
+.dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1.1rem; }
+.cat-card { background:white; border-radius:12px; padding:1.3rem; box-shadow:0 2px 10px rgba(107,58,42,0.07); border:1px solid var(--border); transition:transform 0.2s,box-shadow 0.2s; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:0.4rem; position:relative; overflow:hidden; }
+.cat-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--terra),var(--or)); transform:scaleX(0); transition:transform 0.3s; transform-origin:left; }
+.cat-card:hover { transform:translateY(-4px); box-shadow:0 10px 22px rgba(107,58,42,0.14); }
+.cat-card:hover::after { transform:scaleX(1); }
+.cat-icon { font-size:2rem; }
+.cat-name { font-weight:700; color:var(--brun); font-size:0.97rem; }
+.cat-desc { color:var(--text-mid); font-size:0.83rem; flex:1; }
+.cat-link { color:var(--terra); font-size:0.82rem; font-weight:600; margin-top:auto; }
 
-.artisan-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1.2rem; }
-.artisan-card {
-    background:white; border-radius:12px; padding:1.4rem;
-    box-shadow:0 2px 8px rgba(0,0,0,0.06);
-    display:flex; flex-direction:column; gap:0.4rem;
-    transition:transform 0.2s; text-decoration:none; color:inherit;
-}
-.artisan-card:hover { transform:translateY(-3px); }
-.artisan-initiales {
-    width:52px; height:52px; border-radius:50%;
-    background:#dbeafe; color:#1d4ed8;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:1rem; margin-bottom:0.4rem;
-}
-.artisan-name { font-weight:700; color:#1e293b; font-size:1rem; }
-.artisan-spe { display:inline-block; background:#f0f9ff; color:#0369a1; font-size:0.72rem; font-weight:600; padding:0.2rem 0.55rem; border-radius:999px; }
-.artisan-bio { color:#64748b; font-size:0.85rem; }
-.artisan-link { color:#0d6efd; font-size:0.85rem; font-weight:600; margin-top:0.5rem; }
+.artisan-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.1rem; }
+.artisan-card { background:white; border-radius:12px; padding:1.3rem; box-shadow:0 2px 10px rgba(107,58,42,0.07); border:1px solid var(--border); display:flex; flex-direction:column; gap:0.4rem; transition:transform 0.2s; text-decoration:none; color:inherit; position:relative; overflow:hidden; }
+.artisan-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--terra),var(--ocre),var(--or)); }
+.artisan-card:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(107,58,42,0.13); }
+.artisan-initiales { width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg,var(--terra),var(--ocre)); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.95rem; }
+.artisan-name { font-weight:700; color:var(--brun); font-size:0.97rem; }
+.artisan-spe { display:inline-block; background:var(--vert-light); color:var(--vert); font-size:0.7rem; font-weight:600; padding:0.18rem 0.5rem; border-radius:999px; }
+.artisan-bio { color:var(--text-mid); font-size:0.83rem; }
+.artisan-link { color:var(--terra); font-size:0.82rem; font-weight:600; margin-top:0.4rem; }
 </style>
 
 <div class="dashboard">
-
-    <div class="dashboard-hero">
+    <div class="dashboard-hero fade-in">
         <div class="dashboard-avatar">{{ auth()->user() ? strtoupper(substr(auth()->user()->name, 0, 2)) : 'U' }}</div>
         <div>
             <h1>Bonjour, {{ auth()->user()?->name ?? 'Utilisateur' }} 👋</h1>
@@ -48,166 +33,101 @@
         </div>
     </div>
 
-    {{-- Stats --}}
     <div class="dashboard-stats">
-        <div class="stat-card">
-            <span class="stat-num" id="stat-commandes">—</span>
-            <span class="stat-label">Commandes</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-num" id="stat-favoris">—</span>
-            <span class="stat-label">Favoris</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-num" id="stat-panier">—</span>
-            <span class="stat-label">Articles au panier</span>
-        </div>
+        <div class="stat-card fade-in"><span class="stat-num" id="stat-commandes">—</span><span class="stat-label">Commandes</span></div>
+        <div class="stat-card fade-in"><span class="stat-num" id="stat-favoris">—</span><span class="stat-label">Favoris</span></div>
+        <div class="stat-card fade-in"><span class="stat-num" id="stat-panier">—</span><span class="stat-label">Articles au panier</span></div>
     </div>
 
-    {{-- Catégories --}}
     <section class="section">
-        <div class="section-header">
-            <h2>Parcourir par catégorie</h2>
-            <p class="section-sub">Trouvez l'œuvre qui vous parle</p>
-        </div>
-        <div class="dash-grid" id="categories-grid">
-            <p style="color:#94a3b8">Chargement des catégories...</p>
-        </div>
+        <div class="section-header"><h2>Parcourir par catégorie</h2><p class="section-sub">Trouvez l'œuvre qui vous parle</p></div>
+        <div class="dash-grid" id="categories-grid"><p style="color:var(--text-light)">Chargement...</p></div>
     </section>
 
-    {{-- Artisans --}}
     <section class="section">
-        <div class="section-header">
-            <h2>Artisans à découvrir</h2>
-            <p class="section-sub">Des talents sélectionnés pour vous</p>
-        </div>
-        <div class="artisan-grid" id="artisans-grid">
-            <p style="color:#94a3b8">Chargement des artisans...</p>
-        </div>
+        <div class="section-header"><h2>Artisans à découvrir</h2><p class="section-sub">Des talents sélectionnés pour vous</p></div>
+        <div class="artisan-grid" id="artisans-grid"><p style="color:var(--text-light)">Chargement...</p></div>
     </section>
-
 </div>
 
 <script>
 const token = localStorage.getItem('token');
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
-// ── Icônes catégories ─────────────────────────────────────────────────────────
 function iconeCategorie(nom) {
     const k = nom?.toLowerCase() ?? '';
-    if (k.includes('peinture'))                          return '🎨';
-    if (k.includes('bijou'))                             return '💍';
-    if (k.includes('sculpture'))                         return '🗿';
-    if (k.includes('textile'))                           return '🧵';
-    if (k.includes('décor') || k.includes('decor'))     return '🏺';
-    if (k.includes('artisanat') || k.includes('trad'))  return '🤝';
-    if (k.includes('poterie') || k.includes('argile'))  return '🏛️';
-    if (k.includes('bois'))                              return '🪵';
+    if (k.includes('peinture')) return '🎨';
+    if (k.includes('bijou'))    return '💍';
+    if (k.includes('sculpture'))return '🗿';
+    if (k.includes('textile'))  return '🧵';
+    if (k.includes('décor') || k.includes('decor')) return '🏺';
+    if (k.includes('artisanat')|| k.includes('trad')) return '🤝';
+    if (k.includes('poterie') || k.includes('argile')) return '🏛️';
+    if (k.includes('bois'))     return '🪵';
     return '🎁';
 }
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
 async function loadStats() {
     try {
         const [commandes, favoris, panier] = await Promise.all([
-            fetch('/api/v1/acheteur/commandes',  { headers: authHeaders, credentials: 'include' }).then(r => r.json()).catch(() => ({})),
-            fetch('/api/v1/acheteur/favoris',    { headers: authHeaders, credentials: 'include' }).then(r => r.json()).catch(() => ({})),
-            fetch('/api/v1/acheteur/panier',     { headers: authHeaders, credentials: 'include' }).then(r => r.json()).catch(() => ({})),
+            fetch('/api/v1/acheteur/commandes', {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
+            fetch('/api/v1/acheteur/favoris',   {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
+            fetch('/api/v1/acheteur/panier',    {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
         ]);
-
-        const nbCommandes = commandes.data?.commandes?.length ?? commandes.data?.length ?? 0;
-        const nbFavoris   = favoris.data?.favoris?.length     ?? favoris.data?.length   ?? 0;
-        const nbPanier    = panier.data?.items?.length        ?? panier.data?.length    ?? 0;
-
-        document.getElementById('stat-commandes').textContent = nbCommandes;
-        document.getElementById('stat-favoris').textContent   = nbFavoris;
-        document.getElementById('stat-panier').textContent    = nbPanier;
-
-    } catch (e) {
-        ['stat-commandes','stat-favoris','stat-panier'].forEach(id => {
-            document.getElementById(id).textContent = '0';
-        });
-        console.error('Erreur stats', e);
-    }
+        document.getElementById('stat-commandes').textContent = commandes.data?.commandes?.length ?? commandes.data?.length ?? 0;
+        document.getElementById('stat-favoris').textContent   = favoris.data?.favoris?.length ?? favoris.data?.length ?? 0;
+        document.getElementById('stat-panier').textContent    = panier.data?.items?.length ?? panier.data?.length ?? 0;
+    } catch(e) { ['stat-commandes','stat-favoris','stat-panier'].forEach(id=>{ document.getElementById(id).textContent='0'; }); }
 }
 
-// ── Catégories ────────────────────────────────────────────────────────────────
 async function loadCategories() {
     const grid = document.getElementById('categories-grid');
     try {
         const res  = await fetch('/api/v1/catalog/categories', { headers: { 'Accept': 'application/json' } });
         const json = await res.json();
         const cats = Array.isArray(json.data) ? json.data : [];
-
-        if (!cats.length) {
-            grid.innerHTML = '<p style="color:#94a3b8">Aucune catégorie disponible.</p>';
-            return;
-        }
-
+        if (!cats.length) { grid.innerHTML = '<p style="color:var(--text-light)">Aucune catégorie.</p>'; return; }
         grid.innerHTML = cats.map(cat => {
-            // ✅ CORRECTION : name au lieu de nom
             const nom  = cat.name ?? cat.nom ?? '';
-            const desc = cat.description ?? '';
             const icon = iconeCategorie(nom);
             const url  = "{{ route('catalogue.categories') }}?categorie=" + encodeURIComponent(cat.id);
-
-            return `
-            <a href="${url}" class="cat-card">
+            return `<a href="${url}" class="cat-card fade-in">
                 <div class="cat-icon">${icon}</div>
                 <div class="cat-name">${nom}</div>
-                <div class="cat-desc">${desc}</div>
+                <div class="cat-desc">${cat.description ?? ''}</div>
                 <span class="cat-link">Explorer →</span>
             </a>`;
         }).join('');
-
-    } catch (e) {
-        grid.innerHTML = '<p style="color:#ef4444">Erreur chargement des catégories.</p>';
-        console.error(e);
-    }
+        document.querySelectorAll('.fade-in').forEach(el => {
+            if (window.observer) window.observer.observe(el);
+        });
+    } catch(e) { grid.innerHTML = '<p style="color:#ef4444">Erreur chargement.</p>'; }
 }
 
-// ── Artisans ──────────────────────────────────────────────────────────────────
 async function loadArtisans() {
     const grid = document.getElementById('artisans-grid');
     try {
         const res      = await fetch('/api/v1/catalog/artisans?per_page=3', { headers: { 'Accept': 'application/json' } });
         const json     = await res.json();
         const artisans = Array.isArray(json.data) ? json.data : [];
-
-        if (!artisans.length) {
-            grid.innerHTML = '<p style="color:#94a3b8">Aucun artisan à afficher pour le moment.</p>';
-            return;
-        }
-
+        if (!artisans.length) { grid.innerHTML = '<p style="color:var(--text-light)">Aucun artisan.</p>'; return; }
         grid.innerHTML = artisans.map(a => {
-            const initiales = a.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) ?? 'A';
-            const avatar    = a.avatar
-                ? `<img src="${a.avatar}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;margin-bottom:0.4rem">`
-                : `<div class="artisan-initiales">${initiales}</div>`;
-            const note = a.note_moyenne > 0 ? `⭐ ${a.note_moyenne} (${a.total_avis} avis)` : '';
-            const bio  = a.bio ? a.bio.substring(0, 80) + (a.bio.length > 80 ? '...' : '') : '';
-
-            return `
-            <a href="/catalogue/artisans/${a.id}" class="artisan-card">
+            const initiales = a.name?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) ?? 'A';
+            const avatar    = a.avatar ? `<img src="${a.avatar}" style="width:50px;height:50px;border-radius:50%;object-fit:cover">` : `<div class="artisan-initiales">${initiales}</div>`;
+            const note = a.note_moyenne > 0 ? `<span style="color:var(--or);font-size:0.78rem">⭐ ${a.note_moyenne}</span>` : '';
+            return `<a href="/catalogue/artisans/${a.id}" class="artisan-card fade-in">
                 ${avatar}
                 <div class="artisan-name">${a.name}</div>
                 ${a.specialite ? `<span class="artisan-spe">${a.specialite}</span>` : ''}
-                ${note ? `<span style="color:#f59e0b;font-size:0.8rem">${note}</span>` : ''}
-                ${bio  ? `<p class="artisan-bio">${bio}</p>` : ''}
+                ${note}
+                ${a.bio ? `<p class="artisan-bio">${a.bio.substring(0,80)}...</p>` : ''}
                 <span class="artisan-link">Voir le profil →</span>
             </a>`;
         }).join('');
-
-    } catch (e) {
-        grid.innerHTML = '<p style="color:#94a3b8">Artisans non disponibles.</p>';
-        console.error(e);
-    }
+    } catch(e) { grid.innerHTML = '<p style="color:var(--text-light)">Artisans non disponibles.</p>'; }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-loadStats();
-loadCategories();
-loadArtisans();
+loadStats(); loadCategories(); loadArtisans();
 </script>
 
 @endsection
