@@ -1,14 +1,11 @@
 @extends('layouts.app')
-
 @section('title', 'Connexion - ArtisanConnect')
-
 @section('content')
 
 <div class="auth-wrapper">
     <div class="auth-card">
-
         <div class="auth-header">
-            <div class="auth-icon">✦</div>
+            <div class="auth-icon">🔐</div>
             <h2>Bon retour !</h2>
             <p>Connectez-vous à votre espace ArtisanConnect</p>
         </div>
@@ -16,89 +13,64 @@
         <div id="alert-box"></div>
 
         <form id="loginForm">
-
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="jean@exemple.com" required>
+                <label>Adresse email</label>
+                <input type="email" id="email" placeholder="vous@exemple.com" required autocomplete="email">
             </div>
             <div class="form-group">
                 <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="••••••••" required>
+                <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
             </div>
-
             <button type="submit" class="btn btn-full" id="submitBtn">Se connecter</button>
-
-            <p class="auth-footer-text">
-                Pas encore de compte ? <a href="{{ route('auth.register') }}">S'inscrire</a>
-            </p>
         </form>
+
+        <p class="auth-footer-text" style="margin-top:1.25rem">
+            Pas encore de compte ? <a href="{{ route('auth.register') }}">S'inscrire gratuitement</a>
+        </p>
     </div>
 </div>
 
 <script>
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled   = true;
+    btn.disabled    = true;
     btn.textContent = 'Connexion...';
     alertBox.innerHTML = '';
 
+    await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+    const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
+
     try {
-        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
-
-        const xsrfToken = decodeURIComponent(
-            document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
-        );
-
-        const response = await fetch('/api/v1/auth/login', {
+        const res  = await fetch('/api/v1/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-XSRF-TOKEN': xsrfToken,
-            },
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
             credentials: 'include',
             body: JSON.stringify({
-                email: this.email.value,
-                password: this.password.value,
+                email    : document.getElementById('email').value.trim(),
+                password : document.getElementById('password').value,
             }),
         });
+        const json = await res.json();
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            let messages = '';
-            if (data.errors) {
-                messages = Object.values(data.errors).flat().map(e => `<li>${e}</li>`).join('');
-            } else {
-                messages = `<li>${data.message || data.error || 'Une erreur est survenue.'}</li>`;
-            }
-            alertBox.innerHTML = `<div class="alert alert-error"><ul>${messages}</ul></div>`;
+        if (!res.ok) {
+            const msg = json.errors ? Object.values(json.errors).flat().join(', ') : (json.message ?? 'Identifiants incorrects.');
+            alertBox.innerHTML = `<div class="alert alert-error"><ul><li>${msg}</li></ul></div>`;
             return;
         }
 
-        // ✅ Le contrôleur retourne { success, data: { user, token }, message }
-        const token = data.data?.token ?? data.token;
-        const role  = data.data?.user?.role ?? data.user?.role;
+        if (json.data?.token) localStorage.setItem('token', json.data.token);
 
-        if (token) localStorage.setItem('token', token);
+        const role = json.data?.user?.role ?? json.data?.role;
+        const dashLinks = { 'artisan':'dashboard/artisan', 'acheteur':'dashboard/acheteur', 'administrateur':'dashboard/admin' };
+        window.location.href = '/' + (dashLinks[role] ?? '');
 
-        // ✅ Redirection selon le rôle
-        if (role === 'artisan') {
-            window.location.href = '/dashboard/artisan';
-        } else if (role === 'administrateur') {
-            window.location.href = '/dashboard/admin';
-        } else {
-            window.location.href = '/dashboard/acheteur';
-        }
-
-    } catch (err) {
+    } catch (e) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau. Réessayez.</li></ul></div>`;
-        console.error(err);
+        console.error(e);
     } finally {
-        btn.disabled = false;
+        btn.disabled    = false;
         btn.textContent = 'Se connecter';
     }
 });
