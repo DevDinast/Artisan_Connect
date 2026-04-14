@@ -102,7 +102,11 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             return;
         }
 
-        if (json.data?.token) localStorage.setItem('token', json.data.token);
+        if (json.data?.token) {
+            localStorage.setItem('token', json.data.token);
+            document.cookie = `api_token=${json.data.token};path=/;max-age=86400`;
+        }
+
         alertBox.innerHTML = `<div class="alert alert-success"><ul><li>Compte créé avec succès ! Redirection...</li></ul></div>`;
 
         const dashLinks = { 'artisan':'dashboard/artisan', 'acheteur':'dashboard/acheteur', 'administrateur':'dashboard/admin' };

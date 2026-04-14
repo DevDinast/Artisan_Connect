@@ -22,10 +22,15 @@
                 <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-full" id="submitBtn">Se connecter</button>
+
         </form>
 
         <p class="auth-footer-text" style="margin-top:1.25rem">
             Pas encore de compte ? <a href="{{ route('auth.register') }}">S'inscrire gratuitement</a>
+             <p class="auth-footer-text" style="margin-top:1.25rem">
+                Mot de passe oublié ?
+            <a href="{{ route('change-password') }}">Réinitialiser votre mot de passe</a>
+            </p>
         </p>
     </div>
 </div>
@@ -60,7 +65,10 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             return;
         }
 
-        if (json.data?.token) localStorage.setItem('token', json.data.token);
+        if (json.data?.token) {
+            localStorage.setItem('token', json.data.token);
+            document.cookie = `api_token=${json.data.token};path=/;max-age=86400`;
+        }
 
         const role = json.data?.user?.role ?? json.data?.role;
         const dashLinks = { 'artisan':'dashboard/artisan', 'acheteur':'dashboard/acheteur', 'administrateur':'dashboard/admin' };

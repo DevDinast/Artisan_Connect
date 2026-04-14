@@ -26,9 +26,9 @@
 
 <div class="dashboard">
     <div class="dashboard-hero fade-in">
-        <div class="dashboard-avatar">{{ auth()->user() ? strtoupper(substr(auth()->user()->name, 0, 2)) : 'U' }}</div>
+        <div class="dashboard-avatar" id="user-avatar">—</div>
         <div>
-            <h1>Bonjour, {{ auth()->user()?->name ?? 'Utilisateur' }} 👋</h1>
+            <h1 id="user-greeting">Bonjour 👋</h1>
             <p>Découvrez les dernières créations de nos artisans.</p>
         </div>
     </div>
@@ -50,20 +50,35 @@
     </section>
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
-const token = localStorage.getItem('token');
+// "token" est déclaré dans layouts/app.blade.php — disponible ici car @stack('scripts') est après
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
+
+async function loadProfil() {
+    if (!token) return;
+    try {
+        const res  = await fetch('/api/v1/me', { headers: authHeaders, credentials: 'include' });
+        const json = await res.json();
+        const user = json.data?.user;
+        if (!user) return;
+        document.getElementById('user-avatar').textContent   = user.name?.slice(0, 2).toUpperCase() ?? 'U';
+        document.getElementById('user-greeting').textContent = `Bonjour, ${user.name} 👋`;
+    } catch(e) { console.error('Profil non chargé', e); }
+}
 
 function iconeCategorie(nom) {
     const k = nom?.toLowerCase() ?? '';
-    if (k.includes('peinture')) return '🎨';
-    if (k.includes('bijou'))    return '💍';
-    if (k.includes('sculpture'))return '🗿';
-    if (k.includes('textile'))  return '🧵';
+    if (k.includes('peinture'))  return '🎨';
+    if (k.includes('bijou'))     return '💍';
+    if (k.includes('sculpture')) return '🗿';
+    if (k.includes('textile'))   return '🧵';
     if (k.includes('décor') || k.includes('decor')) return '🏺';
-    if (k.includes('artisanat')|| k.includes('trad')) return '🤝';
+    if (k.includes('artisanat') || k.includes('trad')) return '🤝';
     if (k.includes('poterie') || k.includes('argile')) return '🏛️';
-    if (k.includes('bois'))     return '🪵';
+    if (k.includes('bois'))      return '🪵';
     return '🎁';
 }
 
@@ -77,7 +92,11 @@ async function loadStats() {
         document.getElementById('stat-commandes').textContent = commandes.data?.commandes?.length ?? commandes.data?.length ?? 0;
         document.getElementById('stat-favoris').textContent   = favoris.data?.favoris?.length ?? favoris.data?.length ?? 0;
         document.getElementById('stat-panier').textContent    = panier.data?.items?.length ?? panier.data?.length ?? 0;
-    } catch(e) { ['stat-commandes','stat-favoris','stat-panier'].forEach(id=>{ document.getElementById(id).textContent='0'; }); }
+    } catch(e) {
+        ['stat-commandes','stat-favoris','stat-panier'].forEach(id => {
+            document.getElementById(id).textContent = '0';
+        });
+    }
 }
 
 async function loadCategories() {
@@ -113,7 +132,9 @@ async function loadArtisans() {
         if (!artisans.length) { grid.innerHTML = '<p style="color:var(--text-light)">Aucun artisan.</p>'; return; }
         grid.innerHTML = artisans.map(a => {
             const initiales = a.name?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) ?? 'A';
-            const avatar    = a.avatar ? `<img src="${a.avatar}" style="width:50px;height:50px;border-radius:50%;object-fit:cover">` : `<div class="artisan-initiales">${initiales}</div>`;
+            const avatar    = a.avatar
+                ? `<img src="${a.avatar}" style="width:50px;height:50px;border-radius:50%;object-fit:cover">`
+                : `<div class="artisan-initiales">${initiales}</div>`;
             const note = a.note_moyenne > 0 ? `<span style="color:var(--or);font-size:0.78rem">⭐ ${a.note_moyenne}</span>` : '';
             return `<a href="/catalogue/artisans/${a.id}" class="artisan-card fade-in">
                 ${avatar}
@@ -127,7 +148,6 @@ async function loadArtisans() {
     } catch(e) { grid.innerHTML = '<p style="color:var(--text-light)">Artisans non disponibles.</p>'; }
 }
 
-loadStats(); loadCategories(); loadArtisans();
+loadProfil(); loadStats(); loadCategories(); loadArtisans();
 </script>
-
-@endsection
+@endpush
