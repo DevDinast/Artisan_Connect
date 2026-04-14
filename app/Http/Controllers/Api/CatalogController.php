@@ -244,4 +244,6 @@ class CatalogController extends Controller
             ]),
         ]]);
     }
+
+    
 }

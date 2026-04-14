@@ -173,8 +173,8 @@ async function initNavbar() {
             const count = Array.isArray(items) ? items.length : 0;
             const badge = document.getElementById('panier-badge');
             if (count > 0) {
-                badge.textContent    = count > 9 ? '9+' : count;
-                badge.style.display  = 'flex';
+                badge.textContent   = count > 9 ? '9+' : count;
+                badge.style.display = 'flex';
             }
         } catch (e) { console.error(e); }
     }

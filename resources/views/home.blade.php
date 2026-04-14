@@ -478,4 +478,17 @@
     <a href="{{ route('auth.register') }}" class="btn">Créer mon espace artisan</a>
 </div>
 
+<script>
+// Animation au scroll
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+            setTimeout(() => entry.target.classList.add('visible'), i * 100);
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.card-animate').forEach(el => observer.observe(el));
+</script>
+
 @endsection
