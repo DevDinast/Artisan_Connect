@@ -10,7 +10,13 @@ use Illuminate\Support\Facades\Route;
 | Pages publiques
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn() => view('home'))->name('home');
+Route::get('/', function () {
+    $artisans = User::where('role', 'artisan')
+        ->with('artisan')
+        ->limit(3)
+        ->get();
+    return view('home', compact('artisans'));
+})->name('home');
 Route::get('/catalogue', fn() => view('catalogue.categories'))->name('catalogue.categories');
 Route::get('/catalogue/oeuvres/{id}', fn($id) => view('catalogue.show', ['id' => $id]))->name('catalogue.oeuvre');
 Route::get('/catalogue/artisans/{id}', function ($id) {
@@ -26,6 +32,7 @@ Route::get('/catalogue/artisans/{id}', function ($id) {
 Route::get('/auth/register', fn() => view('auth.register'))->name('auth.register');
 Route::get('/auth/login',    fn() => view('auth.login'))->name('auth.login');
 Route::get('/login',         fn() => view('auth.login'))->name('login');
+
 
 /*
 |--------------------------------------------------------------------------

@@ -1,12 +1,9 @@
 @extends('layouts.app')
-
 @section('title', 'Inscription - ArtisanConnect')
-
 @section('content')
 
 <div class="auth-wrapper">
-    <div class="auth-card">
-
+    <div class="auth-card" style="max-width:520px">
         <div class="auth-header">
             <div class="auth-icon">✦</div>
             <h2>Créer un compte</h2>
@@ -15,11 +12,10 @@
 
         <div id="alert-box"></div>
 
-        <form id="registerForm" enctype="multipart/form-data">
-
+        <form id="registerForm">
             <div class="role-selector">
                 <label class="role-option">
-                    <input type="radio" name="role" value="acheteur">
+                    <input type="radio" name="role" value="acheteur" checked>
                     <div class="role-card">
                         <span class="role-emoji">🛍️</span>
                         <strong>Acheteur</strong>
@@ -37,107 +33,91 @@
             </div>
 
             <div class="form-group">
-                <label>Nom complet</label>
-                <input type="text" name="name" placeholder="Jean Dupont" required>
+                <label>Nom complet <span style="color:var(--terra)">*</span></label>
+                <input type="text" id="name" placeholder="Jean Dupont" required maxlength="100">
             </div>
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="jean@exemple.com" required>
+                <label>Email <span style="color:var(--terra)">*</span></label>
+                <input type="email" id="email" placeholder="vous@exemple.com" required>
             </div>
             <div class="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="••••••••" required>
+                <label>Mot de passe <span style="color:var(--terra)">*</span></label>
+                <input type="password" id="password" placeholder="Minimum 8 caractères" required>
             </div>
             <div class="form-group">
-                <label>Confirmer le mot de passe</label>
-                <input type="password" name="password_confirmation" placeholder="••••••••" required>
+                <label>Confirmer le mot de passe <span style="color:var(--terra)">*</span></label>
+                <input type="password" id="password_confirmation" placeholder="Répétez le mot de passe" required>
             </div>
             <div class="form-group">
                 <label>Photo de profil <span class="optional">(optionnel)</span></label>
-                <input type="file" name="avatar" accept="image/*" class="input-file">
+                <input type="file" id="avatar" accept="image/*" class="input-file">
             </div>
 
-            <button type="submit" class="btn btn-full" id="submitBtn">S'inscrire</button>
-
-            <p class="auth-footer-text">
-                Déjà un compte ? <a href="{{ route('auth.login') }}">Se connecter</a>
-            </p>
+            <button type="submit" class="btn btn-full" id="submitBtn">Créer mon compte</button>
         </form>
+
+        <p class="auth-footer-text" style="margin-top:1.25rem">
+            Déjà un compte ? <a href="{{ route('auth.login') }}">Se connecter</a>
+        </p>
     </div>
 </div>
 
 <script>
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled   = true;
-    btn.textContent = 'Inscription...';
+    btn.disabled    = true;
+    btn.textContent = 'Création...';
     alertBox.innerHTML = '';
 
-    // Validation du rôle côté JS
-    const role = this.querySelector('input[name="role"]:checked')?.value;
-    if (!role) {
-        alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Veuillez choisir un rôle (Acheteur ou Artisan).</li></ul></div>`;
-        btn.disabled = false;
-        btn.textContent = "S'inscrire";
-        return;
-    }
+    const role = document.querySelector('input[name="role"]:checked')?.value ?? 'acheteur';
+
+    await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+    const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
 
     try {
-        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+        const formData = new FormData();
+        formData.append('name',                  document.getElementById('name').value.trim());
+        formData.append('email',                 document.getElementById('email').value.trim());
+        formData.append('password',              document.getElementById('password').value);
+        formData.append('password_confirmation', document.getElementById('password_confirmation').value);
+        formData.append('role',                  role);
+        const avatar = document.getElementById('avatar').files[0];
+        if (avatar) formData.append('avatar', avatar);
 
-        const xsrfToken = decodeURIComponent(
-            document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
-        );
-
-        const formData = new FormData(this);
-
-        const response = await fetch('/api/v1/auth/register', {
+        const res  = await fetch('/api/v1/auth/register', {
             method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-XSRF-TOKEN': xsrfToken,
-            },
+            headers: { 'Accept': 'application/json', 'X-XSRF-TOKEN': xsrf },
             credentials: 'include',
             body: formData,
         });
+        const json = await res.json();
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            let messages = '';
-            if (data.errors) {
-                messages = Object.values(data.errors).flat().map(e => `<li>${e}</li>`).join('');
-            } else {
-                messages = `<li>${data.message || 'Une erreur est survenue.'}</li>`;
-            }
-            alertBox.innerHTML = `<div class="alert alert-error"><ul>${messages}</ul></div>`;
+        if (!res.ok) {
+            const msgs = json.errors
+                ? Object.values(json.errors).flat().map(e=>`<li>${e}</li>`).join('')
+                : `<li>${json.message ?? 'Erreur.'}</li>`;
+            alertBox.innerHTML = `<div class="alert alert-error"><ul>${msgs}</ul></div>`;
             return;
         }
 
-        // ✅ Le contrôleur retourne { success, data: { user, token }, message }
-        const token    = data.data?.token ?? data.token;
-        const userRole = data.data?.user?.role ?? data.user?.role;
-
-        if (token) localStorage.setItem('token', token);
-
-        // ✅ Redirection selon le rôle
-        if (userRole === 'artisan') {
-            window.location.href = '/dashboard/artisan';
-        } else if (userRole === 'administrateur') {
-            window.location.href = '/dashboard/admin';
-        } else {
-            window.location.href = '/dashboard/acheteur';
+        if (json.data?.token) {
+            localStorage.setItem('token', json.data.token);
+            document.cookie = `api_token=${json.data.token};path=/;max-age=86400`;
         }
 
-    } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-success"><ul><li>Compte créé avec succès ! Redirection...</li></ul></div>`;
+
+        const dashLinks = { 'artisan':'dashboard/artisan', 'acheteur':'dashboard/acheteur', 'administrateur':'dashboard/admin' };
+        setTimeout(() => { window.location.href = '/' + (dashLinks[role] ?? ''); }, 1200);
+
+    } catch (e) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau. Réessayez.</li></ul></div>`;
-        console.error(err);
+        console.error(e);
     } finally {
-        btn.disabled = false;
-        btn.textContent = "S'inscrire";
+        btn.disabled    = false;
+        btn.textContent = 'Créer mon compte';
     }
 });
 </script>
