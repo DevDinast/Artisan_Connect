@@ -7,9 +7,9 @@
 <div class="dashboard">
 
     <div class="dashboard-hero artisan">
-        <div class="dashboard-avatar artisan-bg">{{ auth()->user() ? strtoupper(substr(auth()->user()->name, 0, 2)) : 'A' }}</div>
+        <div class="dashboard-avatar artisan-bg" id="artisan-avatar-hero">A</div>
         <div>
-            <h1>Bonjour, {{ auth()->user()?->name ?? 'Artisan' }} 🎨</h1>
+            <h1 id="artisan-greeting">Bonjour 🎨</h1>
             <p>Gérez votre atelier et suivez vos ventes.</p>
         </div>
         <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-left:auto">+ Ajouter une œuvre</a>
@@ -42,7 +42,7 @@
             <p class="section-sub">Gérez votre catalogue de créations</p>
         </div>
         <div id="oeuvres-container">
-            <p class="text-gray-400">Chargement de vos œuvres...</p>
+            <p style="color:var(--text-light)">Chargement de vos œuvres...</p>
         </div>
     </section>
 
@@ -53,7 +53,7 @@
             <p class="section-sub">Suivez les achats de vos clients</p>
         </div>
         <div id="commandes-container">
-            <p class="text-gray-400">Chargement des commandes...</p>
+            <p style="color:var(--text-light)">Chargement des commandes...</p>
         </div>
     </section>
 
@@ -65,9 +65,42 @@
 
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
-const token = localStorage.getItem('token');
+// "token" est déclaré dans layouts/app.blade.php
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
+
+// ── Charger le profil artisan (nom + avatar) ──────────────────────────────────
+async function loadProfil() {
+    if (!token) {
+        window.location.href = '{{ route("auth.login") }}';
+        return;
+    }
+    try {
+        const res  = await fetch('/api/v1/me', { headers: authHeaders, credentials: 'include' });
+        const json = await res.json();
+        const user = json.data?.user ?? json.data;
+        if (!user) return;
+
+        // Salutation
+        const prenom = user.name?.split(' ')[0] ?? user.name ?? 'Artisan';
+        document.getElementById('artisan-greeting').textContent = `Bonjour, ${prenom} 🎨`;
+
+        // Avatar : image si elle existe, sinon initiales
+        const avatarEl = document.getElementById('artisan-avatar-hero');
+        if (user.avatar) {
+            // Le backend stocke le chemin relatif ex: "avatars/xxx.jpg"
+            const avatarUrl = user.avatar.startsWith('http') ? user.avatar : `/storage/${user.avatar}`;
+            avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${user.name}"
+                style="width:100%;height:100%;border-radius:50%;object-fit:cover"
+                onerror="this.parentElement.textContent='${prenom.slice(0,2).toUpperCase()}'">`;
+        } else {
+            avatarEl.textContent = user.name?.slice(0, 2).toUpperCase() ?? 'A';
+        }
+    } catch (e) { console.error('Profil non chargé', e); }
+}
 
 // ── Badge couleur selon statut ────────────────────────────────────────────────
 function badgeStatut(statut) {
@@ -90,10 +123,9 @@ function badgeStatut(statut) {
 
 // ── Image depuis chemin storage ───────────────────────────────────────────────
 function imageUrl(images) {
-    if (!images?.length) return 'https://via.placeholder.com/400x300?text=Oeuvre';
+    if (!images?.length) return 'https://placehold.co/400x300?text=Oeuvre';
     const img = images[0];
-    // ✅ Le backend retourne 'chemin' pas 'url'
-    return img.url ?? (img.chemin ? `/storage/${img.chemin}` : 'https://via.placeholder.com/400x300?text=Oeuvre');
+    return img.url ?? (img.chemin ? `/storage/${img.chemin}` : 'https://placehold.co/400x300?text=Oeuvre');
 }
 
 // ── Dashboard stats ───────────────────────────────────────────────────────────
@@ -101,7 +133,6 @@ async function loadDashboard() {
     try {
         const res  = await fetch('/api/v1/artisan/dashboard', { headers: authHeaders, credentials: 'include' });
         const json = await res.json();
-        // ✅ Le backend retourne data.stats
         const d    = json.data?.stats ?? json.data ?? json;
 
         document.getElementById('stat-oeuvres').textContent   = d.nb_oeuvres_publiees  ?? d.total_oeuvres   ?? 0;
@@ -120,7 +151,6 @@ async function loadOeuvres() {
     try {
         const res  = await fetch('/api/v1/artisan/oeuvres', { headers: authHeaders, credentials: 'include' });
         const json = await res.json();
-        // ✅ CORRECTION : les œuvres sont dans data.oeuvres
         const oeuvres = json.data?.oeuvres ?? json.data ?? json;
 
         if (!Array.isArray(oeuvres) || oeuvres.length === 0) {
@@ -135,33 +165,32 @@ async function loadOeuvres() {
         }
 
         container.innerHTML = `
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.2rem">
                 ${oeuvres.map(o => {
-                    // ✅ CORRECTION : chemin au lieu de url
                     const image     = imageUrl(o.images);
                     const statut    = o.statut ?? 'brouillon';
                     const prix      = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
-                    // ✅ CORRECTION : name au lieu de nom
                     const categorie = o.categorie?.name ?? o.categorie?.nom ?? 'Divers';
-
                     return `
-                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                        <img src="${image}" alt="${o.titre}" class="w-full h-40 object-cover">
-                        <div class="p-4">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="text-lg font-semibold">${o.titre}</h3>
+                    <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border)">
+                        <img src="${image}" alt="${o.titre}"
+                             style="width:100%;height:160px;object-fit:cover"
+                             onerror="this.src='https://placehold.co/400x160?text=Image'">
+                        <div style="padding:1rem">
+                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem">
+                                <h3 style="font-size:0.95rem;font-weight:700;color:var(--brun)">${o.titre}</h3>
                                 ${badgeStatut(statut)}
                             </div>
-                            <p class="text-gray-500 text-sm mb-1">${categorie}</p>
-                            <p class="text-gray-800 font-bold mb-3">${prix}</p>
-                            ${o.motif_refus ? `<p style="color:#991b1b;font-size:0.8rem;margin-bottom:0.5rem">Motif : ${o.motif_refus}</p>` : ''}
-                            <div class="flex gap-2">
+                            <p style="color:var(--text-mid);font-size:0.82rem;margin-bottom:0.25rem">${categorie}</p>
+                            <p style="color:var(--terra);font-weight:700;font-size:0.95rem;margin-bottom:0.75rem">${prix}</p>
+                            ${o.motif_refus ? `<p style="color:#991b1b;font-size:0.78rem;margin-bottom:0.5rem">Motif : ${o.motif_refus}</p>` : ''}
+                            <div style="display:flex;gap:0.5rem">
                                 <a href="/artisan/oeuvres/${o.id}/edit"
-                                   class="flex-1 text-center border border-blue-500 text-blue-500 py-1 rounded hover:bg-blue-50 transition text-sm">
+                                   style="flex:1;text-align:center;border:1px solid var(--terra);color:var(--terra);padding:0.4rem;border-radius:6px;font-size:0.82rem;font-weight:600;text-decoration:none">
                                    Modifier
                                 </a>
                                 <button onclick="supprimerOeuvre(${o.id})"
-                                    class="flex-1 text-center border border-red-400 text-red-400 py-1 rounded hover:bg-red-50 transition text-sm">
+                                    style="flex:1;border:1px solid #ef4444;color:#ef4444;padding:0.4rem;border-radius:6px;font-size:0.82rem;font-weight:600;background:none;cursor:pointer">
                                     Supprimer
                                 </button>
                             </div>
@@ -171,7 +200,7 @@ async function loadOeuvres() {
             </div>`;
 
     } catch (e) {
-        container.innerHTML = '<p class="text-red-400">Erreur chargement des œuvres.</p>';
+        container.innerHTML = '<p style="color:#ef4444">Erreur chargement des œuvres.</p>';
         console.error(e);
     }
 }
@@ -198,7 +227,6 @@ async function loadCommandes() {
     try {
         const res      = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
         const json     = await res.json();
-        // ✅ Le backend retourne data.ventes
         const commandes = json.data?.ventes ?? json.data ?? json;
 
         if (!Array.isArray(commandes) || commandes.length === 0) {
@@ -212,38 +240,40 @@ async function loadCommandes() {
         }
 
         container.innerHTML = `
-            <table class="w-full text-sm border-collapse">
+            <div style="overflow-x:auto">
+            <table style="width:100%;font-size:0.88rem;border-collapse:collapse">
                 <thead>
-                    <tr class="bg-gray-50 text-left">
-                        <th class="p-3 border-b">Référence</th>
-                        <th class="p-3 border-b">Œuvre</th>
-                        <th class="p-3 border-b">Montant</th>
-                        <th class="p-3 border-b">Statut</th>
-                        <th class="p-3 border-b">Date</th>
+                    <tr style="background:var(--sable-mid);text-align:left">
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Réf.</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Œuvre</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Montant</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Statut</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${commandes.slice(0, 10).map(c => `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-3 border-b">#${c.id}</td>
-                        <td class="p-3 border-b">${c.oeuvre?.titre ?? '—'}</td>
-                        <td class="p-3 border-b">${Number(c.montant_artisan ?? c.montant ?? 0).toLocaleString('fr-FR')} FCFA</td>
-                        <td class="p-3 border-b">${c.statut ?? '—'}</td>
-                        <td class="p-3 border-b">${c.created_at ? new Date(c.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:0.75rem 1rem">#${c.id}</td>
+                        <td style="padding:0.75rem 1rem">${c.oeuvre?.titre ?? '—'}</td>
+                        <td style="padding:0.75rem 1rem;color:var(--terra);font-weight:700">${Number(c.montant_artisan ?? c.montant ?? 0).toLocaleString('fr-FR')} FCFA</td>
+                        <td style="padding:0.75rem 1rem">${c.statut ?? '—'}</td>
+                        <td style="padding:0.75rem 1rem;color:var(--text-mid)">${c.created_at ? new Date(c.created_at).toLocaleDateString('fr-FR') : '—'}</td>
                     </tr>`).join('')}
                 </tbody>
-            </table>`;
+            </table>
+            </div>`;
 
     } catch (e) {
-        container.innerHTML = '<p class="text-red-400">Erreur chargement des commandes.</p>';
+        container.innerHTML = '<p style="color:#ef4444">Erreur chargement des commandes.</p>';
         console.error(e);
     }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
+loadProfil();
 loadDashboard();
 loadOeuvres();
 loadCommandes();
 </script>
-
-@endsection
+@endpush

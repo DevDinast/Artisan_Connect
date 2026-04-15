@@ -54,9 +54,8 @@
 
 @push('scripts')
 <script>
-// "token" est déclaré dans layouts/app.blade.php — disponible ici car @stack('scripts') est après
+if (!token) { window.location.href = '{{ route("auth.login") }}'; }
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
-
 async function loadProfil() {
     if (!token) return;
     try {
