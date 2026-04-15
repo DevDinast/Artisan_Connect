@@ -27,9 +27,7 @@
 
         <p class="auth-footer-text" style="margin-top:1.25rem">
             Pas encore de compte ? <a href="{{ route('auth.register') }}">S'inscrire gratuitement</a>
-             <p class="auth-footer-text" style="margin-top:1.25rem">
-                Mot de passe oublié ?
-            </p>
+             
         </p>
     </div>
 </div>
