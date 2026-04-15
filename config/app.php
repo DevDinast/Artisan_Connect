@@ -40,6 +40,7 @@ return [
     */
 
     'debug' => (bool) env('APP_DEBUG', false),
+    'email_verification' => (bool) env('EMAIL_VERIFICATION', true),
 
     /*
     |--------------------------------------------------------------------------

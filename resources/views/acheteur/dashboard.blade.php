@@ -1,153 +1,280 @@
 @extends('layouts.app')
-@section('title', 'Mon espace - ArtisanConnect')
+
+@section('title', 'Mon atelier - ArtisanConnect')
+
 @section('content')
 
-<style>
-.dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1.1rem; }
-.cat-card { background:white; border-radius:12px; padding:1.3rem; box-shadow:0 2px 10px rgba(107,58,42,0.07); border:1px solid var(--border); transition:transform 0.2s,box-shadow 0.2s; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:0.4rem; position:relative; overflow:hidden; }
-.cat-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--terra),var(--or)); transform:scaleX(0); transition:transform 0.3s; transform-origin:left; }
-.cat-card:hover { transform:translateY(-4px); box-shadow:0 10px 22px rgba(107,58,42,0.14); }
-.cat-card:hover::after { transform:scaleX(1); }
-.cat-icon { font-size:2rem; }
-.cat-name { font-weight:700; color:var(--brun); font-size:0.97rem; }
-.cat-desc { color:var(--text-mid); font-size:0.83rem; flex:1; }
-.cat-link { color:var(--terra); font-size:0.82rem; font-weight:600; margin-top:auto; }
-
-.artisan-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.1rem; }
-.artisan-card { background:white; border-radius:12px; padding:1.3rem; box-shadow:0 2px 10px rgba(107,58,42,0.07); border:1px solid var(--border); display:flex; flex-direction:column; gap:0.4rem; transition:transform 0.2s; text-decoration:none; color:inherit; position:relative; overflow:hidden; }
-.artisan-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--terra),var(--ocre),var(--or)); }
-.artisan-card:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(107,58,42,0.13); }
-.artisan-initiales { width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg,var(--terra),var(--ocre)); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.95rem; }
-.artisan-name { font-weight:700; color:var(--brun); font-size:0.97rem; }
-.artisan-spe { display:inline-block; background:var(--vert-light); color:var(--vert); font-size:0.7rem; font-weight:600; padding:0.18rem 0.5rem; border-radius:999px; }
-.artisan-bio { color:var(--text-mid); font-size:0.83rem; }
-.artisan-link { color:var(--terra); font-size:0.82rem; font-weight:600; margin-top:0.4rem; }
-</style>
-
 <div class="dashboard">
-    <div class="dashboard-hero fade-in">
-        <div class="dashboard-avatar" id="user-avatar">—</div>
+
+    <div class="dashboard-hero artisan">
+        <div class="dashboard-avatar artisan-bg" id="artisan-avatar-hero">A</div>
         <div>
-            <h1 id="user-greeting">Bonjour 👋</h1>
-            <p>Découvrez les dernières créations de nos artisans.</p>
+            <h1 id="artisan-greeting">Bonjour 🎨</h1>
+            <p>Gérez votre atelier et suivez vos ventes.</p>
+        </div>
+        <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-left:auto">+ Ajouter une œuvre</a>
+    </div>
+
+    {{-- Stats dynamiques --}}
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span class="stat-num" id="stat-oeuvres">—</span>
+            <span class="stat-label">Œuvres publiées</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-num" id="stat-attente">—</span>
+            <span class="stat-label">En attente</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-num" id="stat-commandes">—</span>
+            <span class="stat-label">Commandes reçues</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-num" id="stat-revenus">—</span>
+            <span class="stat-label">Revenus totaux</span>
         </div>
     </div>
 
-    <div class="dashboard-stats">
-        <div class="stat-card fade-in"><span class="stat-num" id="stat-commandes">—</span><span class="stat-label">Commandes</span></div>
-        <div class="stat-card fade-in"><span class="stat-num" id="stat-favoris">—</span><span class="stat-label">Favoris</span></div>
-        <div class="stat-card fade-in"><span class="stat-num" id="stat-panier">—</span><span class="stat-label">Articles au panier</span></div>
-    </div>
-
+    {{-- Mes œuvres --}}
     <section class="section">
-        <div class="section-header"><h2>Parcourir par catégorie</h2><p class="section-sub">Trouvez l'œuvre qui vous parle</p></div>
-        <div class="dash-grid" id="categories-grid"><p style="color:var(--text-light)">Chargement...</p></div>
+        <div class="section-header">
+            <h2>Mes œuvres</h2>
+            <p class="section-sub">Gérez votre catalogue de créations</p>
+        </div>
+        <div id="oeuvres-container">
+            <p style="color:var(--text-light)">Chargement de vos œuvres...</p>
+        </div>
     </section>
 
+    {{-- Dernières commandes --}}
     <section class="section">
-        <div class="section-header"><h2>Artisans à découvrir</h2><p class="section-sub">Des talents sélectionnés pour vous</p></div>
-        <div class="artisan-grid" id="artisans-grid"><p style="color:var(--text-light)">Chargement...</p></div>
+        <div class="section-header">
+            <h2>Dernières commandes</h2>
+            <p class="section-sub">Suivez les achats de vos clients</p>
+        </div>
+        <div id="commandes-container">
+            <p style="color:var(--text-light)">Chargement des commandes...</p>
+        </div>
     </section>
+
+    <section class="cta-section" style="margin-top:3rem">
+        <h2>Boostez votre visibilité</h2>
+        <p>Complétez votre profil et ajoutez des photos de qualité pour attirer plus d'acheteurs.</p>
+        <a href="{{ route('me.profil') }}" class="btn">Compléter mon profil</a>
+    </section>
+
 </div>
 
 @endsection
 
 @push('scripts')
 <script>
-// "token" est déclaré dans layouts/app.blade.php — disponible ici car @stack('scripts') est après
+
+if (!token) { window.location.href = '{{ route("auth.login") }}'; }
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
+// ── Charger le profil artisan (nom + avatar) ──────────────────────────────────
 async function loadProfil() {
-    if (!token) return;
+    if (!token) {
+        window.location.href = '{{ route("auth.login") }}';
+        return;
+    }
     try {
         const res  = await fetch('/api/v1/me', { headers: authHeaders, credentials: 'include' });
         const json = await res.json();
-        const user = json.data?.user;
+        const user = json.data?.user ?? json.data;
         if (!user) return;
-        document.getElementById('user-avatar').textContent   = user.name?.slice(0, 2).toUpperCase() ?? 'U';
-        document.getElementById('user-greeting').textContent = `Bonjour, ${user.name} 👋`;
-    } catch(e) { console.error('Profil non chargé', e); }
+
+        // Salutation
+        const prenom = user.name?.split(' ')[0] ?? user.name ?? 'Artisan';
+        document.getElementById('artisan-greeting').textContent = `Bonjour, ${prenom} 🎨`;
+
+        // Avatar : image si elle existe, sinon initiales
+        const avatarEl = document.getElementById('artisan-avatar-hero');
+        if (user.avatar) {
+            // Le backend stocke le chemin relatif ex: "avatars/xxx.jpg"
+            const avatarUrl = user.avatar.startsWith('http') ? user.avatar : `/storage/${user.avatar}`;
+            avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${user.name}"
+                style="width:100%;height:100%;border-radius:50%;object-fit:cover"
+                onerror="this.parentElement.textContent='${prenom.slice(0,2).toUpperCase()}'">`;
+        } else {
+            avatarEl.textContent = user.name?.slice(0, 2).toUpperCase() ?? 'A';
+        }
+    } catch (e) { console.error('Profil non chargé', e); }
 }
 
-function iconeCategorie(nom) {
-    const k = nom?.toLowerCase() ?? '';
-    if (k.includes('peinture'))  return '🎨';
-    if (k.includes('bijou'))     return '💍';
-    if (k.includes('sculpture')) return '🗿';
-    if (k.includes('textile'))   return '🧵';
-    if (k.includes('décor') || k.includes('decor')) return '🏺';
-    if (k.includes('artisanat') || k.includes('trad')) return '🤝';
-    if (k.includes('poterie') || k.includes('argile')) return '🏛️';
-    if (k.includes('bois'))      return '🪵';
-    return '🎁';
+// ── Badge couleur selon statut ────────────────────────────────────────────────
+function badgeStatut(statut) {
+    const badges = {
+        'validee'    : 'background:#d1fae5;color:#065f46',
+        'en_attente' : 'background:#fef3c7;color:#92400e',
+        'brouillon'  : 'background:#f3f4f6;color:#374151',
+        'refusee'    : 'background:#fee2e2;color:#991b1b',
+    };
+    const labels = {
+        'validee'    : '✓ Validée',
+        'en_attente' : '⏳ En attente',
+        'brouillon'  : '📝 Brouillon',
+        'refusee'    : '✗ Refusée',
+    };
+    const style = badges[statut] ?? 'background:#f3f4f6;color:#374151';
+    const label = labels[statut] ?? statut;
+    return `<span style="${style};padding:0.2rem 0.6rem;border-radius:1rem;font-size:0.75rem;font-weight:600">${label}</span>`;
 }
 
-async function loadStats() {
+// ── Image depuis chemin storage ───────────────────────────────────────────────
+function imageUrl(images) {
+    if (!images?.length) return 'https://placehold.co/400x300?text=Oeuvre';
+    const img = images[0];
+    return img.url ?? (img.chemin ? `/storage/${img.chemin}` : 'https://placehold.co/400x300?text=Oeuvre');
+}
+
+// ── Dashboard stats ───────────────────────────────────────────────────────────
+async function loadDashboard() {
     try {
-        const [commandes, favoris, panier] = await Promise.all([
-            fetch('/api/v1/acheteur/commandes', {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
-            fetch('/api/v1/acheteur/favoris',   {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
-            fetch('/api/v1/acheteur/panier',    {headers:authHeaders,credentials:'include'}).then(r=>r.json()).catch(()=>({})),
-        ]);
-        document.getElementById('stat-commandes').textContent = commandes.data?.commandes?.length ?? commandes.data?.length ?? 0;
-        document.getElementById('stat-favoris').textContent   = favoris.data?.favoris?.length ?? favoris.data?.length ?? 0;
-        document.getElementById('stat-panier').textContent    = panier.data?.items?.length ?? panier.data?.length ?? 0;
-    } catch(e) {
-        ['stat-commandes','stat-favoris','stat-panier'].forEach(id => {
-            document.getElementById(id).textContent = '0';
-        });
+        const res  = await fetch('/api/v1/artisan/dashboard', { headers: authHeaders, credentials: 'include' });
+        const json = await res.json();
+        const d    = json.data?.stats ?? json.data ?? json;
+
+        document.getElementById('stat-oeuvres').textContent   = d.nb_oeuvres_publiees  ?? d.total_oeuvres   ?? 0;
+        document.getElementById('stat-attente').textContent   = d.nb_oeuvres_attente   ?? 0;
+        document.getElementById('stat-commandes').textContent = d.nb_ventes            ?? d.total_commandes ?? 0;
+
+        const revenus = Number(d.revenus_total ?? d.revenus_totaux ?? 0).toLocaleString('fr-FR');
+        document.getElementById('stat-revenus').textContent   = revenus + ' FCFA';
+
+    } catch (e) { console.error('Erreur dashboard', e); }
+}
+
+// ── Mes œuvres ────────────────────────────────────────────────────────────────
+async function loadOeuvres() {
+    const container = document.getElementById('oeuvres-container');
+    try {
+        const res  = await fetch('/api/v1/artisan/oeuvres', { headers: authHeaders, credentials: 'include' });
+        const json = await res.json();
+        const oeuvres = json.data?.oeuvres ?? json.data ?? json;
+
+        if (!Array.isArray(oeuvres) || oeuvres.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">🖼️</span>
+                    <h3>Aucune œuvre pour le moment</h3>
+                    <p>Commencez par ajouter votre première création.</p>
+                    <a href="{{ route('artisan.oeuvres.create') }}" class="btn" style="margin-top:1rem">Ajouter une œuvre</a>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.2rem">
+                ${oeuvres.map(o => {
+                    const image     = imageUrl(o.images);
+                    const statut    = o.statut ?? 'brouillon';
+                    const prix      = Number(o.prix).toLocaleString('fr-FR') + ' FCFA';
+                    const categorie = o.categorie?.name ?? o.categorie?.nom ?? 'Divers';
+                    return `
+                    <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border)">
+                        <img src="${image}" alt="${o.titre}"
+                             style="width:100%;height:160px;object-fit:cover"
+                             onerror="this.src='https://placehold.co/400x160?text=Image'">
+                        <div style="padding:1rem">
+                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem">
+                                <h3 style="font-size:0.95rem;font-weight:700;color:var(--brun)">${o.titre}</h3>
+                                ${badgeStatut(statut)}
+                            </div>
+                            <p style="color:var(--text-mid);font-size:0.82rem;margin-bottom:0.25rem">${categorie}</p>
+                            <p style="color:var(--terra);font-weight:700;font-size:0.95rem;margin-bottom:0.75rem">${prix}</p>
+                            ${o.motif_refus ? `<p style="color:#991b1b;font-size:0.78rem;margin-bottom:0.5rem">Motif : ${o.motif_refus}</p>` : ''}
+                            <div style="display:flex;gap:0.5rem">
+                                <a href="/artisan/oeuvres/${o.id}/edit"
+                                   style="flex:1;text-align:center;border:1px solid var(--terra);color:var(--terra);padding:0.4rem;border-radius:6px;font-size:0.82rem;font-weight:600;text-decoration:none">
+                                   Modifier
+                                </a>
+                                <button onclick="supprimerOeuvre(${o.id})"
+                                    style="flex:1;border:1px solid #ef4444;color:#ef4444;padding:0.4rem;border-radius:6px;font-size:0.82rem;font-weight:600;background:none;cursor:pointer">
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+    } catch (e) {
+        container.innerHTML = '<p style="color:#ef4444">Erreur chargement des œuvres.</p>';
+        console.error(e);
     }
 }
 
-async function loadCategories() {
-    const grid = document.getElementById('categories-grid');
+// ── Supprimer une œuvre ───────────────────────────────────────────────────────
+async function supprimerOeuvre(id) {
+    if (!confirm('Supprimer cette œuvre définitivement ?')) return;
     try {
-        const res  = await fetch('/api/v1/catalog/categories', { headers: { 'Accept': 'application/json' } });
-        const json = await res.json();
-        const cats = Array.isArray(json.data) ? json.data : [];
-        if (!cats.length) { grid.innerHTML = '<p style="color:var(--text-light)">Aucune catégorie.</p>'; return; }
-        grid.innerHTML = cats.map(cat => {
-            const nom  = cat.name ?? cat.nom ?? '';
-            const icon = iconeCategorie(nom);
-            const url  = "{{ route('catalogue.categories') }}?categorie=" + encodeURIComponent(cat.id);
-            return `<a href="${url}" class="cat-card fade-in">
-                <div class="cat-icon">${icon}</div>
-                <div class="cat-name">${nom}</div>
-                <div class="cat-desc">${cat.description ?? ''}</div>
-                <span class="cat-link">Explorer →</span>
-            </a>`;
-        }).join('');
-        document.querySelectorAll('.fade-in').forEach(el => {
-            if (window.observer) window.observer.observe(el);
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
+        const xsrf = decodeURIComponent(document.cookie.split('; ').find(r=>r.startsWith('XSRF-TOKEN='))?.split('=')[1]||'');
+        const res  = await fetch(`/api/v1/artisan/oeuvres/${id}`, {
+            method: 'DELETE',
+            headers: { ...authHeaders, 'X-XSRF-TOKEN': xsrf },
+            credentials: 'include',
         });
-    } catch(e) { grid.innerHTML = '<p style="color:#ef4444">Erreur chargement.</p>'; }
+        if (res.ok) loadOeuvres();
+        else alert('Erreur lors de la suppression.');
+    } catch (e) { alert('Erreur réseau.'); }
 }
 
-async function loadArtisans() {
-    const grid = document.getElementById('artisans-grid');
+// ── Dernières commandes ───────────────────────────────────────────────────────
+async function loadCommandes() {
+    const container = document.getElementById('commandes-container');
     try {
-        const res      = await fetch('/api/v1/catalog/artisans?per_page=3', { headers: { 'Accept': 'application/json' } });
+        const res      = await fetch('/api/v1/artisan/ventes', { headers: authHeaders, credentials: 'include' });
         const json     = await res.json();
-        const artisans = Array.isArray(json.data) ? json.data : [];
-        if (!artisans.length) { grid.innerHTML = '<p style="color:var(--text-light)">Aucun artisan.</p>'; return; }
-        grid.innerHTML = artisans.map(a => {
-            const initiales = a.name?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) ?? 'A';
-            const avatar    = a.avatar
-                ? `<img src="${a.avatar}" style="width:50px;height:50px;border-radius:50%;object-fit:cover">`
-                : `<div class="artisan-initiales">${initiales}</div>`;
-            const note = a.note_moyenne > 0 ? `<span style="color:var(--or);font-size:0.78rem">⭐ ${a.note_moyenne}</span>` : '';
-            return `<a href="/catalogue/artisans/${a.id}" class="artisan-card fade-in">
-                ${avatar}
-                <div class="artisan-name">${a.name}</div>
-                ${a.specialite ? `<span class="artisan-spe">${a.specialite}</span>` : ''}
-                ${note}
-                ${a.bio ? `<p class="artisan-bio">${a.bio.substring(0,80)}...</p>` : ''}
-                <span class="artisan-link">Voir le profil →</span>
-            </a>`;
-        }).join('');
-    } catch(e) { grid.innerHTML = '<p style="color:var(--text-light)">Artisans non disponibles.</p>'; }
+        const commandes = json.data?.ventes ?? json.data ?? json;
+
+        if (!Array.isArray(commandes) || commandes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">📦</span>
+                    <h3>Aucune commande pour le moment</h3>
+                    <p>Vos commandes apparaîtront ici dès qu'un client achètera une de vos œuvres.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="overflow-x:auto">
+            <table style="width:100%;font-size:0.88rem;border-collapse:collapse">
+                <thead>
+                    <tr style="background:var(--sable-mid);text-align:left">
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Réf.</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Œuvre</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Montant</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Statut</th>
+                        <th style="padding:0.75rem 1rem;border-bottom:1px solid var(--border)">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${commandes.slice(0, 10).map(c => `
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:0.75rem 1rem">#${c.id}</td>
+                        <td style="padding:0.75rem 1rem">${c.oeuvre?.titre ?? '—'}</td>
+                        <td style="padding:0.75rem 1rem;color:var(--terra);font-weight:700">${Number(c.montant_artisan ?? c.montant ?? 0).toLocaleString('fr-FR')} FCFA</td>
+                        <td style="padding:0.75rem 1rem">${c.statut ?? '—'}</td>
+                        <td style="padding:0.75rem 1rem;color:var(--text-mid)">${c.created_at ? new Date(c.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+            </div>`;
+
+    } catch (e) {
+        container.innerHTML = '<p style="color:#ef4444">Erreur chargement des commandes.</p>';
+        console.error(e);
+    }
 }
 
-loadProfil(); loadStats(); loadCategories(); loadArtisans();
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadProfil();
+loadDashboard();
+loadOeuvres();
+loadCommandes();
 </script>
 @endpush
