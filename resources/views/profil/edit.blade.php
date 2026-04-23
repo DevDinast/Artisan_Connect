@@ -72,8 +72,9 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-const token = localStorage.getItem('token');
+// "token" est déclaré en var dans layouts/app.blade.php
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
 async function loadProfil() {
@@ -98,17 +99,19 @@ async function loadProfil() {
         }
 
         if (user.avatar) {
+            const avatarUrl = user.avatar.startsWith('http') ? user.avatar : `/storage/${user.avatar}`;
             document.getElementById('avatar-preview').innerHTML =
-                `<img src="/storage/${user.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">`;
+                `<img src="${avatarUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover"
+                      onerror="this.style.display='none'">`;
         }
     } catch (e) { console.error(e); }
 }
 
 document.getElementById('profilForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const btn = document.getElementById('submitBtn');
+    const btn      = document.getElementById('submitBtn');
     const alertBox = document.getElementById('alert-box');
-    btn.disabled = true;
+    btn.disabled    = true;
     btn.textContent = 'Enregistrement...';
     alertBox.innerHTML = '';
 
@@ -129,7 +132,9 @@ document.getElementById('profilForm').addEventListener('submit', async function(
         const json = await res.json();
 
         if (!res.ok) {
-            const msgs = json.errors ? Object.values(json.errors).flat().map(e=>`<li>${e}</li>`).join('') : `<li>${json.message ?? 'Erreur.'}</li>`;
+            const msgs = json.errors
+                ? Object.values(json.errors).flat().map(e=>`<li>${e}</li>`).join('')
+                : `<li>${json.message ?? 'Erreur.'}</li>`;
             alertBox.innerHTML = `<div class="alert alert-error"><ul>${msgs}</ul></div>`;
             return;
         }
@@ -137,7 +142,7 @@ document.getElementById('profilForm').addEventListener('submit', async function(
     } catch (e) {
         alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Erreur réseau.</li></ul></div>`;
     } finally {
-        btn.disabled = false;
+        btn.disabled    = false;
         btn.textContent = 'Enregistrer';
     }
 });
@@ -160,7 +165,10 @@ document.getElementById('avatarBtn').addEventListener('click', async function() 
             body: formData,
         });
         const json = await res.json();
-        if (!res.ok) { alertBox.innerHTML = `<div class="alert alert-error"><ul><li>${json.message ?? 'Erreur.'}</li></ul></div>`; return; }
+        if (!res.ok) {
+            alertBox.innerHTML = `<div class="alert alert-error"><ul><li>${json.message ?? 'Erreur.'}</li></ul></div>`;
+            return;
+        }
         document.getElementById('avatar-preview').innerHTML =
             `<img src="${json.data?.avatar_url}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">`;
         alertBox.innerHTML = `<div class="alert alert-success"><ul><li>Photo mise à jour ✓</li></ul></div>`;
@@ -171,5 +179,6 @@ document.getElementById('avatarBtn').addEventListener('click', async function() 
 
 loadProfil();
 </script>
+@endpush
 
 @endsection

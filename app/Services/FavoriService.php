@@ -51,7 +51,7 @@ class FavoriService
                 'success' => true,
                 'message' => 'Œuvre ajoutée aux favoris avec succès',
                 'data' => $favori->load(['oeuvre' => function ($q) {
-                    $q->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
+                    $q->with(['artisan.utilisateur:id,name', 'images' => function ($img) {
                         $img->principale()->byOrder();
                     }]);
                 }])
@@ -80,7 +80,7 @@ class FavoriService
             $favoris = Favori::with([
                 'oeuvre' => function ($q) {
                     $q->with([
-                        'artisan.utilisateur:id,nom,prenom',
+                        'artisan.utilisateur:id,name',
                         'categorie:id,nom,slug',
                         'images' => function ($img) {
                             $img->principale()->byOrder();
@@ -219,7 +219,7 @@ class FavoriService
             $favoris = Favori::with([
                 'oeuvre' => function ($q) {
                     $q->with([
-                        'artisan.utilisateur:id,nom,prenom',
+                        'artisan.utilisateur:id,name',
                         'images' => function ($img) {
                             $img->principale()->byOrder();
                         }
@@ -263,7 +263,7 @@ class FavoriService
             $favoris = Favori::with([
                 'oeuvre' => function ($q) {
                     $q->with([
-                        'artisan.utilisateur:id,nom,prenom',
+                        'artisan.utilisateur:id,name',
                         'images' => function ($img) {
                             $img->principale()->byOrder();
                         }
@@ -337,11 +337,11 @@ class FavoriService
         try {
             $artisans = Favori::join('oeuvres', 'favoris.oeuvre_id', '=', 'oeuvres.id')
                 ->join('artisans', 'oeuvres.artisan_id', '=', 'artisans.id')
-                ->join('utilisateurs', 'artisans.utilisateur_id', '=', 'utilisateurs.id')
+                ->join('users', 'artisans.user_id', '=', 'users.id')
                 ->where('favoris.acheteur_id', $acheteurId)
                 ->where('favoris.type', 'favori')
-                ->select('artisans.id', 'utilisateurs.nom', 'utilisateurs.prenom', DB::raw('COUNT(*) as count'))
-                ->groupBy('artisans.id', 'utilisateurs.nom', 'utilisateurs.prenom')
+                ->select('artisans.id', 'users.name', DB::raw('COUNT(*) as count'))
+                ->groupBy('artisans.id', 'users.name')
                 ->orderBy('count', 'desc')
                 ->take(5)
                 ->get();

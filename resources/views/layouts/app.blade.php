@@ -31,7 +31,7 @@
             <ul class="nav-links" id="nav-links" role="navigation">
                 <li><a href="{{ route('catalogue.categories') }}">Catalogue</a></li>
                 <li id="nav-register"><a href="{{ route('auth.register') }}">S'inscrire</a></li>
-                 <li id="nav-login"><a href="{{ route('auth.login') }}">Connexion</a></li>
+                <li id="nav-login"><a href="{{ route('auth.login') }}">Connexion</a></li>
                 <li id="nav-panier" style="display:none">
                     <a href="/panier" class="nav-panier">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -113,10 +113,26 @@
         </div>
     </footer>
 
+    @verbatim
     <script>
+    // ── Token : localStorage + sync depuis cookie api_token ──────────────────
     var token = localStorage.getItem('token');
 
-    // ── Menu mobile ────────────────────────────────────────────────────
+    // CORRECTION : si token absent de localStorage mais présent dans le cookie
+    // (cas d'un utilisateur connecté avant la mise en place du localStorage),
+    // on synchronise automatiquement
+    if (!token) {
+        var cookieParts = document.cookie.split('; ');
+        for (var i = 0; i < cookieParts.length; i++) {
+            if (cookieParts[i].startsWith('api_token=')) {
+                token = cookieParts[i].split('=')[1];
+                if (token) { localStorage.setItem('token', token); }
+                break;
+            }
+        }
+    }
+
+    // ── Menu mobile ───────────────────────────────────────────────────────────
     var navToggle = document.getElementById('nav-toggle');
     var navLinks  = document.getElementById('nav-links');
 
@@ -135,43 +151,86 @@
         }
     });
 
-    // ── Navbar utilisateur ─────────────────────────────────────────────
-async function initNavbar() {
+    // ── Navbar utilisateur ────────────────────────────────────────────────────
+    async function initNavbar() {
+    // Si pas de token en localStorage → déconnecté, afficher les liens publics
+    if (!token) {
+        document.getElementById('nav-register').style.display  = 'list-item';
+        document.getElementById('nav-login').style.display     = 'list-item';
+        document.getElementById('nav-logout').style.display    = 'none';
+        document.getElementById('nav-user').style.display      = 'none';
+        document.getElementById('nav-dashboard').style.display = 'none';
+        document.getElementById('nav-panier').style.display    = 'none';
+        document.getElementById('nav-commandes').style.display = 'none';
+        return;
+    }
+
     try {
         const res = await fetch('/api/v1/me', {
-            headers: { 'Accept': 'application/json' },
+            headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
             credentials: 'include'
         });
 
         if (res.ok) {
-            // CONNECTÉ
+            const json = await res.json();
+            const user = json.data?.user ?? json.data;
+
             document.getElementById('nav-register').style.display  = 'none';
             document.getElementById('nav-login').style.display     = 'none';
             document.getElementById('nav-logout').style.display    = 'list-item';
             document.getElementById('nav-user').style.display      = 'list-item';
             document.getElementById('nav-dashboard').style.display = 'list-item';
+
+            if (user?.name) {
+                document.getElementById('nav-username').textContent = user.name.split(' ')[0];
+                document.getElementById('nav-avatar').textContent   = user.name.slice(0, 2).toUpperCase();
+            }
+
+            const role = user?.role;
+            const dashLinks = {
+                'artisan'       : '/dashboard/artisan',
+                'acheteur'      : '/dashboard/acheteur',
+                'administrateur': '/dashboard/admin',
+                'admin'         : '/dashboard/admin'
+            };
+            const dashLink = document.getElementById('nav-dashboard-link');
+            if (dashLink && dashLinks[role]) {
+                dashLink.href        = dashLinks[role];
+                dashLink.textContent = role === 'artisan' ? 'Mon atelier' : (role.includes('admin') ? 'Administration' : 'Mon espace');
+            }
+
+            if (role === 'acheteur') {
+                document.getElementById('nav-panier').style.display    = 'list-item';
+                document.getElementById('nav-commandes').style.display = 'list-item';
+                loadPanierCount();
+            }
+
         } else {
-            // NON CONNECTÉ
-            document.getElementById('nav-register').style.display = 'list-item';
-            document.getElementById('nav-login').style.display    = 'list-item';
-            document.getElementById('nav-logout').style.display   = 'none';
+            // Token invalide ou expiré → nettoyer et afficher déconnecté
+            localStorage.removeItem('token');
+            token = null;
+            document.getElementById('nav-register').style.display  = 'list-item';
+            document.getElementById('nav-login').style.display     = 'list-item';
+            document.getElementById('nav-logout').style.display    = 'none';
+            document.getElementById('nav-user').style.display      = 'none';
+            document.getElementById('nav-dashboard').style.display = 'none';
         }
 
     } catch (e) {
         console.error(e);
     }
 }
-
     async function loadPanierCount() {
+        if (!token) return;
         try {
-            const res   = await fetch('/api/v1/acheteur/panier', {
-                headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
-                credentials: 'include'
+            var res  = await fetch('/api/v1/acheteur/panier', {
+                headers     : { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token },
+                credentials : 'include',
             });
-            const json  = await res.json();
-            const items = json.data?.items ?? json.data ?? [];
-            const count = Array.isArray(items) ? items.length : 0;
-            const badge = document.getElementById('panier-badge');
+            var json  = await res.json();
+            var items = (json.data && json.data.items) ? json.data.items : (json.data || []);
+            var count = Array.isArray(items) ? items.length : 0;
+            var badge = document.getElementById('panier-badge');
             if (count > 0) {
                 badge.textContent   = count > 9 ? '9+' : count;
                 badge.style.display = 'flex';
@@ -179,12 +238,9 @@ async function initNavbar() {
         } catch (e) { console.error(e); }
     }
 
-async function logout() {
+  async function logout() {
     try {
-        await fetch('/sanctum/csrf-cookie', {
-            method: 'GET',
-            credentials: 'include'
-        });
+        await fetch('/sanctum/csrf-cookie', { method: 'GET', credentials: 'include' });
 
         const xsrf = decodeURIComponent(
             document.cookie.split('; ')
@@ -195,37 +251,46 @@ async function logout() {
         await fetch('/api/v1/auth/logout', {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
-                'X-XSRF-TOKEN': xsrf
+                'Accept'       : 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-XSRF-TOKEN' : xsrf
             },
             credentials: 'include'
         });
 
     } catch (e) {
-        console.error(e);
+        console.error('Logout error:', e);
     } finally {
+        // Supprimer le token
+        localStorage.removeItem('token');
+        // Supprimer les cookies un par un
+        document.cookie.split(';').forEach(c => {
+            const name = c.trim().split('=')[0];
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+        });
         window.location.href = '/';
     }
 }
-    // ── Intersection observer pour les animations de carte ─────────────
+
+    // ── Animations ────────────────────────────────────────────────────────────
     if ('IntersectionObserver' in window) {
-        window.observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry, i) => {
+        window.observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry, i) {
                 if (entry.isIntersecting) {
-                    setTimeout(() => entry.target.classList.add('visible'), i * 80);
+                    setTimeout(function() { entry.target.classList.add('visible'); }, i * 80);
                     observer.unobserve(entry.target);
                 }
             });
         }, { threshold: 0.08 });
-        document.querySelectorAll('.card-animate').forEach(el => observer.observe(el));
+        document.querySelectorAll('.card-animate').forEach(function(el) { observer.observe(el); });
     } else {
-        document.querySelectorAll('.card-animate').forEach(el => el.classList.add('visible'));
+        document.querySelectorAll('.card-animate').forEach(function(el) { el.classList.add('visible'); });
     }
 
     initNavbar();
     </script>
+    @endverbatim
 
-    {{-- Les scripts des vues enfants s'exécutent ICI, après que "token" soit défini --}}
     @stack('scripts')
 
 </body>

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Commande;
-use App\Models\Paiement;
 use App\Models\Transaction;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +30,7 @@ class PaiementService
             }
 
             // Vérifier qu'il n'y a pas déjà un paiement en cours
-            $paiementExistant = Paiement::where('commande_id', $commande->id)
+            $paiementExistant = Transaction::where('commande_id', $commande->id)
                 ->whereIn('statut', ['en_attente', 'en_cours'])
                 ->first();
 
@@ -45,17 +44,14 @@ class PaiementService
 
             DB::beginTransaction();
 
-            // Créer le paiement
-            $paiement = Paiement::create([
+            // Créer le paiement via Transaction
+            $paiement = Transaction::create([
                 'commande_id' => $commande->id,
                 'acheteur_id' => $acheteurId,
-                'montant' => $commande->montant_avec_commission,
-                'methode' => $data['methode'],
-                'telephone' => $data['telephone'],
-                'operateur' => $this->getOperateur($data['methode']),
+                'montant_total' => $commande->montant_avec_commission,
+                'mode_paiement' => $data['methode'],
                 'statut' => 'en_attente',
                 'reference' => $this->genererReferencePaiement(),
-                'date_expiration' => now()->addMinutes(15), // 15 minutes pour payer
             ]);
 
             // Mettre à jour le statut de la commande
@@ -70,11 +66,9 @@ class PaiementService
                 'success' => true,
                 'message' => 'Paiement initié avec succès',
                 'data' => [
-                    'paiement' => $paiement->load(['commande']),
-                    'instructions' => $resultatInitiation['instructions'],
+                    'paiement' => $paiement,
                     'reference' => $paiement->reference,
-                    'montant' => $paiement->montant,
-                    'date_expiration' => $paiement->date_expiration,
+                    'montant' => $paiement->montant_total,
                 ]
             ];
 
@@ -100,20 +94,20 @@ class PaiementService
     public function getStatutPaiement($paiementId, $acheteurId)
     {
         try {
-            $paiement = Paiement::with(['commande'])
-                ->where('id', $paiementId)
+            $paiement = Transaction::where('id', $paiementId)
                 ->where('acheteur_id', $acheteurId)
                 ->firstOrFail();
 
             // Vérifier si le paiement a expiré
-            if ($paiement->statut === 'en_attente' && $paiement->date_expiration < now()) {
+            if ($paiement->statut === 'en_attente' && $paiement->created_at->addMinutes(15) < now()) {
                 $paiement->update([
-                    'statut' => 'expire',
-                    'motif_echec' => 'Paiement expiré'
+                    'statut' => 'expire'
                 ]);
 
                 // Remettre la commande en attente
-                $paiement->commande->update(['statut' => 'en_attente']);
+                if ($paiement->commande) {
+                    $paiement->commande->update(['statut' => 'en_attente']);
+                }
             }
 
             return [
@@ -142,8 +136,7 @@ class PaiementService
     public function confirmerPaiement($paiementId, array $data)
     {
         try {
-            $paiement = Paiement::with(['commande.transactions'])
-                ->findOrFail($paiementId);
+            $paiement = Transaction::findOrFail($paiementId);
 
             if ($paiement->statut !== 'en_attente') {
                 return [
@@ -155,27 +148,22 @@ class PaiementService
 
             DB::beginTransaction();
 
-            // Mettre à jour le paiement
+            // Mettre à jour le paiement/transaction
             $paiement->update([
-                'statut' => 'paye',
-                'date_paiement' => now(),
-                'transaction_id_operateur' => $data['transaction_id'] ?? null,
+                'statut' => 'payee',
             ]);
 
             // Mettre à jour la commande
-            $paiement->commande->update(['statut' => 'confirmee']);
-
-            // Mettre à jour les transactions
-            foreach ($paiement->commande->transactions as $transaction) {
-                $transaction->update(['statut' => 'payee']);
+            if ($paiement->commande) {
+                $paiement->commande->update(['statut' => 'confirmee']);
             }
 
             // Notifier l'acheteur
             $this->notifierUtilisateur($paiement->acheteur_id, 'paiement', 'Paiement confirmé', 'Votre paiement a été traité avec succès');
 
-            // Notifier les artisans
-            foreach ($paiement->commande->transactions as $transaction) {
-                $this->notifierUtilisateur($transaction->artisan_id, 'vente', 'Nouvelle vente', 'Une commande a été payée');
+            // Notifier l'artisan
+            if ($paiement->artisan_id) {
+                $this->notifierUtilisateur($paiement->artisan_id, 'vente', 'Nouvelle vente', 'Une commande a été payée');
             }
 
             DB::commit();
@@ -208,7 +196,7 @@ class PaiementService
     public function annulerPaiement($paiementId, $acheteurId)
     {
         try {
-            $paiement = Paiement::where('id', $paiementId)
+            $paiement = Transaction::where('id', $paiementId)
                 ->where('acheteur_id', $acheteurId)
                 ->firstOrFail();
 
@@ -224,12 +212,13 @@ class PaiementService
 
             // Mettre à jour le paiement
             $paiement->update([
-                'statut' => 'annule',
-                'motif_echec' => 'Annulé par l\'utilisateur',
+                'statut' => 'annulee',
             ]);
 
             // Remettre la commande en attente
-            $paiement->commande->update(['statut' => 'en_attente']);
+            if ($paiement->commande) {
+                $paiement->commande->update(['statut' => 'en_attente']);
+            }
 
             DB::commit();
 
@@ -261,8 +250,7 @@ class PaiementService
     public function getHistoriquePaiements($acheteurId)
     {
         try {
-            $paiements = Paiement::with(['commande'])
-                ->where('acheteur_id', $acheteurId)
+            $paiements = Transaction::where('acheteur_id', $acheteurId)
                 ->latest()
                 ->paginate(15);
 
@@ -407,7 +395,7 @@ class PaiementService
     {
         do {
             $reference = 'PAY' . date('YmdHis') . str_pad(mt_rand(1, 999), 3, '0', STR_PAD_LEFT);
-        } while (Paiement::where('reference', $reference)->exists());
+        } while (Transaction::where('reference', $reference)->exists());
 
         return $reference;
     }
@@ -419,7 +407,7 @@ class PaiementService
     {
         try {
             Notification::create([
-                'utilisateur_id' => $utilisateurId,
+                'user_id' => $utilisateurId,
                 'type' => $type,
                 'titre' => $titre,
                 'message' => $message,

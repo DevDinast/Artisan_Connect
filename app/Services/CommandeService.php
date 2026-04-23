@@ -4,17 +4,11 @@ namespace App\Services;
 
 use App\Models\Commande;
 use App\Models\Favori;
-use App\Services\TransactionService;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 
 class CommandeService
 {
-    protected $transactionService;
-
-    public function __construct(TransactionService $transactionService)
-    {
-        $this->transactionService = $transactionService;
-    }
 
     /**
      * Créer une nouvelle commande
@@ -36,13 +30,16 @@ class CommandeService
             }
 
             // Vérifier la disponibilité des articles
-            $disponibilite = $this->transactionService->verifierDisponibilitePanier($acheteurId);
-            if (!$disponibilite['success'] || !$disponibilite['data']['panier_valide']) {
-                return [
-                    'success' => false,
-                    'message' => 'Certains articles ne sont plus disponibles',
-                    'problemes' => $disponibilite['data']
-                ];
+            foreach ($panier as $item) {
+                if ($item->oeuvre->stock < $item->quantite) {
+                    return [
+                        'success' => false,
+                        'message' => 'Stock insuffisant pour ' . $item->oeuvre->titre,
+                        'oeuvre_id' => $item->oeuvre->id,
+                        'stock_disponible' => $item->oeuvre->stock,
+                        'stock_demande' => $item->quantite
+                    ];
+                }
             }
 
             DB::beginTransaction();
@@ -54,7 +51,7 @@ class CommandeService
             foreach ($panier as $item) {
                 $sousTotal = $item->quantite * $item->oeuvre->prix;
                 $commission = $sousTotal * 0.15;
-                
+
                 $totalCommande += $sousTotal;
                 $totalCommission += $commission;
             }
@@ -74,11 +71,16 @@ class CommandeService
             ]);
 
             // Créer les transactions
-            $resultTransactions = $this->transactionService->creerTransactions($commande->id, $panier);
+            foreach ($panier as $item) {
+                // Réduire le stock
+                $item->oeuvre->decrement('stock', $item->quantite);
 
-            if (!$resultTransactions['success']) {
-                DB::rollBack();
-                return $resultTransactions;
+                // Créer la transaction
+                $transaction = Transaction::create([
+                    'montant_artisan' => $item->quantite * $item->oeuvre->prix * 0.85,
+                    'statut' => 'en_attente',
+                    'reference' => $this->genererReference()
+                ]);
             }
 
             // Vider le panier
@@ -114,7 +116,7 @@ class CommandeService
             $commandes = Commande::with([
                 'transactions' => function ($q) {
                     $q->with(['oeuvre' => function ($oeuvre) {
-                        $oeuvre->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
+                        $oeuvre->with(['artisan.utilisateur:id,name', 'images' => function ($img) {
                             $img->principale()->byOrder();
                         }]);
                     }]);
@@ -154,11 +156,11 @@ class CommandeService
                 'transactions' => function ($q) {
                     $q->with([
                         'oeuvre' => function ($oeuvre) {
-                            $oeuvre->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
+                            $oeuvre->with(['artisan.utilisateur:id,name', 'images' => function ($img) {
                                 $img->principale()->byOrder();
                             }]);
                         },
-                        'acheteur.utilisateur:id,nom,prenom'
+                        'acheteur.utilisateur:id,name'
                     ]);
                 }
             ])
@@ -214,7 +216,7 @@ class CommandeService
 
             // Annuler toutes les transactions
             foreach ($commande->transactions as $transaction) {
-                $this->transactionService->mettreAJourStatut($transaction->id, 'annulee');
+                $transaction->update(['statut' => 'annulee']);
             }
 
             DB::commit();
@@ -303,7 +305,7 @@ class CommandeService
     {
         try {
             $query = Commande::query();
-            
+
             if ($acheteurId) {
                 $query->where('acheteur_id', $acheteurId);
             }

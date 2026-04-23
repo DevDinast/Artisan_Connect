@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Artisan;
 use App\Models\Oeuvre;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class ValidationService
     {
         try {
             $oeuvres = Oeuvre::with([
-                'artisan.utilisateur:id,nom,prenom,email',
+                'artisan.utilisateur:id,name,email',
                 'categorie:id,nom,slug',
                 'images' => function ($q) {
                     $q->principale()->byOrder();
@@ -201,8 +202,8 @@ class ValidationService
     {
         try {
             $validations = Oeuvre::with([
-                'artisan.utilisateur:id,nom,prenom',
-                'validateur.utilisateur:id,nom,prenom',
+                'artisan.utilisateur:id,name',
+                'validateur.utilisateur:id,name',
                 'categorie:id,nom,slug'
             ])
             ->whereIn('statut', ['validee', 'refusee'])
@@ -235,8 +236,14 @@ class ValidationService
     private function notifierArtisan($artisanId, $type, $titre, $message, $details = null)
     {
         try {
+            $artisan = Artisan::find($artisanId);
+
+            if (!$artisan || !$artisan->user_id) {
+                return;
+            }
+
             Notification::create([
-                'utilisateur_id' => $artisanId,
+                'user_id' => $artisan->user_id,
                 'type' => $type,
                 'titre' => $titre,
                 'message' => $message,

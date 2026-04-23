@@ -183,7 +183,13 @@ async function loadOeuvres() {
                             </div>
                             <p style="color:var(--text-mid);font-size:0.82rem;margin-bottom:0.25rem">${categorie}</p>
                             <p style="color:var(--terra);font-weight:700;font-size:0.95rem;margin-bottom:0.75rem">${prix}</p>
-                            ${o.motif_refus ? `<p style="color:#991b1b;font-size:0.78rem;margin-bottom:0.5rem">Motif : ${o.motif_refus}</p>` : ''}
+                            / APRÈS :
+                          ${o.statut === 'refusee' ? `
+                                       <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.75rem">
+                                      <p style="color:#991b1b;font-size:0.82rem;font-weight:700;margin-bottom:0.2rem">⚠️ Refusée par l'admin</p>
+                                      <p style="color:#7f1d1d;font-size:0.78rem">Motif : ${o.motif_refus ?? 'Non précisé'}</p>
+                                       <p style="color:#991b1b;font-size:0.75rem;margin-top:0.2rem">Modifiez et soumettez à nouveau.</p>
+                              </div>` : ''}
                             <div style="display:flex;gap:0.5rem">
                                 <a href="/artisan/oeuvres/${o.id}/edit"
                                    style="flex:1;text-align:center;border:1px solid var(--terra);color:var(--terra);padding:0.4rem;border-radius:6px;font-size:0.82rem;font-weight:600;text-decoration:none">

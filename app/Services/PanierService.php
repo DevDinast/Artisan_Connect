@@ -42,7 +42,7 @@ class PanierService
             if ($favoriExist) {
                 // Mettre à jour la quantité
                 $nouvelleQuantite = $favoriExist->quantite + $data['quantite'];
-                
+
                 if ($oeuvre->quantite_disponible < $nouvelleQuantite) {
                     return [
                         'success' => false,
@@ -96,7 +96,7 @@ class PanierService
         try {
             $panier = Favori::with([
                 'oeuvre' => function ($q) {
-                    $q->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
+                    $q->with(['artisan.utilisateur:id,name', 'images' => function ($img) {
                         $img->principale()->byOrder();
                     }]);
                 }
@@ -115,10 +115,10 @@ class PanierService
             foreach ($panier as $item) {
                 $sousTotal = $item->quantite * $item->oeuvre->prix;
                 $commission = $sousTotal * 0.15; // 15% de commission
-                
+
                 $totalPrix += $sousTotal;
                 $totalCommission += $commission;
-                
+
                 // Regrouper par artisan
                 $artisanId = $item->oeuvre->artisan_id;
                 if (!isset($totalArtisans[$artisanId])) {

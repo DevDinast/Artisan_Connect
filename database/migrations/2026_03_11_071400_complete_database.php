@@ -80,27 +80,25 @@ Schema::table('categories', function (Blueprint $table) {
 
         // --- 5. COMPLÉTER LA TABLE AVIS ---
         Schema::table('avis', function (Blueprint $table) {
-            $columns = array_column(DB::select('SHOW COLUMNS FROM avis'), 'Field');
-            if (!in_array('transaction_id', $columns))
+            if (!Schema::hasColumn('avis', 'transaction_id'))
                 $table->unsignedBigInteger('transaction_id')->nullable()->after('id');
-            if (!in_array('acheteur_id', $columns))
+            if (!Schema::hasColumn('avis', 'acheteur_id'))
                 $table->unsignedBigInteger('acheteur_id')->nullable()->after('transaction_id');
-            if (!in_array('artisan_id', $columns))
+            if (!Schema::hasColumn('avis', 'artisan_id'))
                 $table->unsignedBigInteger('artisan_id')->nullable()->after('acheteur_id');
-            if (!in_array('note', $columns))
+            if (!Schema::hasColumn('avis', 'note'))
                 $table->integer('note')->after('artisan_id');
-            if (!in_array('commentaire', $columns))
+            if (!Schema::hasColumn('avis', 'commentaire'))
                 $table->text('commentaire')->nullable()->after('note');
-            if (!in_array('statut', $columns))
+            if (!Schema::hasColumn('avis', 'statut'))
                 $table->string('statut')->default('publie')->after('commentaire');
         });
 
         // --- 6. COMPLÉTER LA TABLE FAVORIS ---
         Schema::table('favoris', function (Blueprint $table) {
-            $columns = array_column(DB::select('SHOW COLUMNS FROM favoris'), 'Field');
-            if (!in_array('acheteur_id', $columns))
+            if (!Schema::hasColumn('favoris', 'acheteur_id'))
                 $table->unsignedBigInteger('acheteur_id')->after('id');
-            if (!in_array('oeuvre_id', $columns))
+            if (!Schema::hasColumn('favoris', 'oeuvre_id'))
                 $table->unsignedBigInteger('oeuvre_id')->after('acheteur_id');
         });
 
@@ -137,14 +135,13 @@ Schema::table('categories', function (Blueprint $table) {
         }
 
         // --- 9. INDEX SUR OEUVRES ---
-        $indexes = array_map(fn($i) => $i->Key_name, DB::select("SHOW INDEX FROM `oeuvres`"));
-        Schema::table('oeuvres', function (Blueprint $table) use ($indexes) {
-            if (!in_array('oeuvres_statut_index', $indexes)) $table->index('statut');
-            if (!in_array('oeuvres_prix_index', $indexes)) $table->index('prix');
-            if (!in_array('oeuvres_vues_index', $indexes)) $table->index('vues');
-            if (!in_array('oeuvres_statut_created_at_index', $indexes)) $table->index(['statut', 'created_at']);
-            if (!in_array('oeuvres_statut_prix_index', $indexes)) $table->index(['statut', 'prix']);
-            if (!in_array('oeuvres_statut_vues_index', $indexes)) $table->index(['statut', 'vues']);
+        Schema::table('oeuvres', function (Blueprint $table) {
+            $table->index('statut');
+            $table->index('prix');
+            $table->index('vues');
+            $table->index(['statut', 'created_at']);
+            $table->index(['statut', 'prix']);
+            $table->index(['statut', 'vues']);
         });
     }
 

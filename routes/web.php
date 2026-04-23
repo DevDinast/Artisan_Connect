@@ -78,3 +78,10 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
     $role = $request->user()->role;
     return redirect($role === 'artisan' ? '/dashboard/artisan' : '/dashboard/acheteur');
 })->middleware(['auth', 'signed'])->name('verification.verify');
+
+/*
+|--------------------------------------------------------------------------
+| Changement de mot de passe (vue)
+|--------------------------------------------------------------------------
+*/
+Route::get('/change-password', fn() => view('auth.change-password'))->name('change-password');

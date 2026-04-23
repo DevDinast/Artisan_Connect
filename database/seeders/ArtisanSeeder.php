@@ -15,7 +15,7 @@ class ArtisanSeeder extends Seeder
 
         foreach ($artisans_users as $user) {
             Artisan::create([
-                'utilisateur_id' => $user->id,
+                'user_id' => $user->id,
                 'biographie' => 'Biographie de ' . $user->name,
                 'specialite' => 'Sculpture',
                 'region' => 'Cotonou',

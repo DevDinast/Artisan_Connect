@@ -133,37 +133,40 @@ class ArtisanController extends Controller
      * PUT /v1/artisan/oeuvres/{id}
      */
     public function mettreAJourOeuvre(Request $request, $id)
-    {
-        $artisan = $request->user()->artisan;
-        $oeuvre  = Oeuvre::where('artisan_id', $artisan->id)->findOrFail($id);
+{
+    $artisan = $request->user()->artisan;
+    $oeuvre  = Oeuvre::where('artisan_id', $artisan->id)->findOrFail($id);
 
-        if (!in_array($oeuvre->statut, ['brouillon', 'refusee', 'modif_requise'])) {
-            return response()->json([
-                'success' => false,
-                'data'    => null,
-                'message' => 'Cette œuvre ne peut pas être modifiée dans son état actuel.',
-            ], 422);
-        }
-
-        $data = $request->validate([
-            'titre'        => 'sometimes|string|max:255',
-            'description'  => 'sometimes|string',
-            'categorie_id' => 'sometimes|exists:categories,id',
-            'prix'         => 'sometimes|numeric|min:0',
-            'stock'        => 'sometimes|integer|min:0',
-            'dimensions'   => 'nullable|array',
-            'materiaux'    => 'nullable|array',
-            'poids'        => 'nullable|numeric',
-        ]);
-
-        $oeuvre->update($data);
-
+    // Bloquer uniquement si l'œuvre est validée
+    if ($oeuvre->statut === 'validee') {
         return response()->json([
-            'success' => true,
-            'data'    => ['oeuvre' => $oeuvre->fresh()],
-            'message' => 'Œuvre mise à jour avec succès',
-        ], 200);
+            'success' => false,
+            'message' => 'Une œuvre validée ne peut pas être modifiée.',
+        ], 403);
     }
+
+    $data = $request->validate([
+        'titre'        => 'sometimes|string|max:255',
+        'description'  => 'sometimes|string',
+        'prix'         => 'sometimes|numeric|min:0',
+        'stock'        => 'sometimes|integer|min:0',
+        'categorie_id' => 'sometimes|exists:categories,id',
+    ]);
+
+    // Repasser en brouillon si l'œuvre était en attente ou refusée
+    if (in_array($oeuvre->statut, ['en_attente', 'refusee'])) {
+        $data['statut']      = 'brouillon';
+        $data['motif_refus'] = null;
+    }
+
+    $oeuvre->update($data);
+
+    return response()->json([
+        'success' => true,
+        'data'    => ['oeuvre' => $oeuvre->fresh()->load(['categorie', 'images'])],
+        'message' => 'Œuvre mise à jour avec succès',
+    ], 200);
+}
 
     /**
      * DELETE /v1/artisan/oeuvres/{id}

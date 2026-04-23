@@ -22,7 +22,6 @@
                 <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-full" id="submitBtn">Se connecter</button>
-
         </form>
 
         <p class="auth-footer-text" style="margin-top:1.25rem">
@@ -32,6 +31,7 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -64,11 +64,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
         if (json.data?.token) {
             localStorage.setItem('token', json.data.token);
-            document.cookie = `api_token=${json.data.token};path=/;max-age=86400`;
         }
 
         const role = json.data?.user?.role ?? json.data?.role;
-        const dashLinks = { 'artisan':'dashboard/artisan', 'acheteur':'dashboard/acheteur', 'administrateur':'dashboard/admin' };
+        const dashLinks = {
+            'artisan'       : 'dashboard/artisan',
+            'acheteur'      : 'dashboard/acheteur',
+            'administrateur': 'dashboard/admin',
+            'admin'         : 'dashboard/admin'
+        };
         window.location.href = '/' + (dashLinks[role] ?? '');
 
     } catch (e) {
@@ -80,5 +84,6 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     }
 });
 </script>
+@endpush
 
 @endsection

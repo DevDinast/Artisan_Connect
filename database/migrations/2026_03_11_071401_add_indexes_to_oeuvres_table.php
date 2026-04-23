@@ -16,45 +16,33 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('oeuvres', function (Blueprint $table) {
+        $existingIndexes = $this->getIndexes('oeuvres');
 
-            // Récupérer les index déjà existants sur la table
-            $existingIndexes = $this->getExistingIndexes('oeuvres');
-
-            // --- INDEX SIMPLES ---
+        Schema::table('oeuvres', function (Blueprint $table) use ($existingIndexes) {
             if (!in_array('oeuvres_artisan_id_index', $existingIndexes)) {
                 $table->index('artisan_id');
             }
-
             if (!in_array('oeuvres_categorie_id_index', $existingIndexes)) {
                 $table->index('categorie_id');
             }
-
             if (!in_array('oeuvres_statut_index', $existingIndexes)) {
                 $table->index('statut');
             }
-
             if (!in_array('oeuvres_prix_index', $existingIndexes)) {
                 $table->index('prix');
             }
-
             if (!in_array('oeuvres_created_at_index', $existingIndexes)) {
                 $table->index('created_at');
             }
-
             if (!in_array('oeuvres_vues_index', $existingIndexes)) {
                 $table->index('vues');
             }
-
-            // --- INDEX COMPOSITES ---
             if (!in_array('oeuvres_statut_created_at_index', $existingIndexes)) {
                 $table->index(['statut', 'created_at']);
             }
-
             if (!in_array('oeuvres_statut_prix_index', $existingIndexes)) {
                 $table->index(['statut', 'prix']);
             }
-
             if (!in_array('oeuvres_statut_vues_index', $existingIndexes)) {
                 $table->index(['statut', 'vues']);
             }
@@ -63,58 +51,65 @@ return new class extends Migration
 
     /**
      * Suppression des index en cas de rollback
-     * On vérifie aussi l'existence avant de supprimer
      */
     public function down(): void
     {
-        Schema::table('oeuvres', function (Blueprint $table) {
+        $existingIndexes = $this->getIndexes('oeuvres');
 
-            $existingIndexes = $this->getExistingIndexes('oeuvres');
-
+        Schema::table('oeuvres', function (Blueprint $table) use ($existingIndexes) {
             if (in_array('oeuvres_artisan_id_index', $existingIndexes)) {
-                $table->dropIndex(['artisan_id']);
+                $table->dropIndex('oeuvres_artisan_id_index');
             }
-
             if (in_array('oeuvres_categorie_id_index', $existingIndexes)) {
-                $table->dropIndex(['categorie_id']);
+                $table->dropIndex('oeuvres_categorie_id_index');
             }
-
             if (in_array('oeuvres_statut_index', $existingIndexes)) {
-                $table->dropIndex(['statut']);
+                $table->dropIndex('oeuvres_statut_index');
             }
-
             if (in_array('oeuvres_prix_index', $existingIndexes)) {
-                $table->dropIndex(['prix']);
+                $table->dropIndex('oeuvres_prix_index');
             }
-
             if (in_array('oeuvres_created_at_index', $existingIndexes)) {
-                $table->dropIndex(['created_at']);
+                $table->dropIndex('oeuvres_created_at_index');
             }
-
             if (in_array('oeuvres_vues_index', $existingIndexes)) {
-                $table->dropIndex(['vues']);
+                $table->dropIndex('oeuvres_vues_index');
             }
-
             if (in_array('oeuvres_statut_created_at_index', $existingIndexes)) {
-                $table->dropIndex(['statut', 'created_at']);
+                $table->dropIndex('oeuvres_statut_created_at_index');
             }
-
             if (in_array('oeuvres_statut_prix_index', $existingIndexes)) {
-                $table->dropIndex(['statut', 'prix']);
+                $table->dropIndex('oeuvres_statut_prix_index');
             }
-
             if (in_array('oeuvres_statut_vues_index', $existingIndexes)) {
-                $table->dropIndex(['statut', 'vues']);
+                $table->dropIndex('oeuvres_statut_vues_index');
             }
         });
     }
 
-    /**
-     * Récupère la liste des noms d'index existants sur une table
-     */
-    private function getExistingIndexes(string $table): array
+    private function getIndexes(string $tableName): array
     {
-        $indexes = DB::select("SHOW INDEX FROM `{$table}`");
-        return array_map(fn($index) => $index->Key_name, $indexes);
+        $connection = Schema::getConnection();
+        $driver = $connection->getDriverName();
+        $indexes = [];
+
+        if ($driver === 'sqlite') {
+            $rows = DB::select("PRAGMA index_list('{$tableName}')");
+            foreach ($rows as $row) {
+                $indexes[] = $row->name;
+            }
+        } elseif ($driver === 'mysql') {
+            $rows = DB::select("SHOW INDEX FROM `{$tableName}`");
+            foreach ($rows as $row) {
+                $indexes[] = $row->Key_name;
+            }
+        } else {
+            $rows = DB::select('SELECT indexname AS name FROM pg_indexes WHERE tablename = ?', [$tableName]);
+            foreach ($rows as $row) {
+                $indexes[] = $row->name;
+            }
+        }
+
+        return array_unique($indexes);
     }
 };
