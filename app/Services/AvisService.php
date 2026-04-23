@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Avis;
+use App\Models\Artisan;
 use App\Models\Oeuvre;
 use App\Models\Transaction;
 use App\Models\Notification;
@@ -71,7 +72,7 @@ class AvisService
             return [
                 'success' => true,
                 'message' => 'Avis créé avec succès',
-                'data' => $avis->load(['acheteur.utilisateur:id,nom,prenom', 'oeuvre:id,titre'])
+                'data' => $avis->load(['acheteur.utilisateur:id,name', 'oeuvre:id,titre'])
             ];
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -96,7 +97,7 @@ class AvisService
     public function getAvisOeuvre($oeuvreId)
     {
         try {
-            $avis = Avis::with(['acheteur.utilisateur:id,nom,prenom'])
+            $avis = Avis::with(['acheteur.utilisateur:id,name'])
                 ->where('oeuvre_id', $oeuvreId)
                 ->where('statut', 'publie')
                 ->latest()
@@ -150,7 +151,7 @@ class AvisService
             return [
                 'success' => true,
                 'message' => 'Avis mis à jour avec succès',
-                'data' => $avis->fresh(['acheteur.utilisateur:id,nom,prenom', 'oeuvre:id,titre'])
+                'data' => $avis->fresh(['acheteur.utilisateur:id,name', 'oeuvre:id,titre'])
             ];
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -220,7 +221,7 @@ class AvisService
     {
         try {
             $avis = Avis::with(['oeuvre' => function ($q) {
-                    $q->with(['artisan.utilisateur:id,nom,prenom', 'images' => function ($img) {
+                    $q->with(['artisan.utilisateur:id,name', 'images' => function ($img) {
                         $img->principale()->byOrder();
                     }]);
                 }])
@@ -333,7 +334,7 @@ class AvisService
     private function getDistributionNotes($artisanId)
     {
         $distribution = [];
-        
+
         for ($i = 1; $i <= 5; $i++) {
             $distribution[$i] = Avis::where('artisan_id', $artisanId)
                 ->where('statut', 'publie')
@@ -350,7 +351,7 @@ class AvisService
     private function getDistributionNotesOeuvre($oeuvreId)
     {
         $distribution = [];
-        
+
         for ($i = 1; $i <= 5; $i++) {
             $distribution[$i] = Avis::where('oeuvre_id', $oeuvreId)
                 ->where('statut', 'publie')
@@ -396,9 +397,14 @@ class AvisService
     {
         try {
             $messageComplet = $message . ($note ? " ({$note}/5)" : "");
-            
+            $artisan = Artisan::find($artisanId);
+
+            if (!$artisan || !$artisan->user_id) {
+                return;
+            }
+
             Notification::create([
-                'utilisateur_id' => $artisanId,
+                'user_id' => $artisan->user_id,
                 'type' => $type,
                 'titre' => $titre,
                 'message' => $messageComplet,

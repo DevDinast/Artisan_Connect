@@ -22,7 +22,7 @@ Route::prefix('v1')->group(function () {
     */
     Route::get('info', fn() => response()->json([
         'message' => 'ArtisanConnect API v1',
-        'version' => '1.0.0'
+        'version' => '1.0.0',
     ]));
 
     /*
@@ -32,16 +32,15 @@ Route::prefix('v1')->group(function () {
     */
     Route::prefix('test')->group(function () {
         Route::get('public',   fn() => response()->json(['message' => 'Public']));
-        Route::middleware('auth:sanctum')->get('auth', fn() => response()->json(['message' => 'Auth']));
-        //Route::middleware(['auth:sanctum', 'email.verified'])->get('verified', fn() => response()->json(['message' => 'Verified']));
-        Route::middleware(['auth:sanctum', 'role:artisan'])->get('artisan', fn() => response()->json(['message' => 'Artisan']));
-        Route::middleware(['auth:sanctum', 'role:acheteur'])->get('acheteur', fn() => response()->json(['message' => 'Acheteur']));
-        Route::middleware(['auth:sanctum', 'role:administrateur'])->get('admin', fn() => response()->json(['message' => 'Admin']));
+        Route::middleware('auth:sanctum')->get('auth',    fn() => response()->json(['message' => 'Auth']));
+        Route::middleware(['auth:sanctum', 'role:artisan'])->get('artisan',       fn() => response()->json(['message' => 'Artisan']));
+        Route::middleware(['auth:sanctum', 'role:acheteur'])->get('acheteur',     fn() => response()->json(['message' => 'Acheteur']));
+        Route::middleware(['auth:sanctum', 'role:administrateur'])->get('admin',  fn() => response()->json(['message' => 'Admin']));
     });
 
     /*
     |--------------------------------------------------------------------------
-    | CATALOGUE (Public - sans authentification)
+    | CATALOGUE (Public)
     |--------------------------------------------------------------------------
     */
     Route::prefix('catalog')->group(function () {
@@ -49,16 +48,16 @@ Route::prefix('v1')->group(function () {
         Route::get('oeuvres',                  [CatalogController::class, 'oeuvres']);
         Route::get('oeuvres/{id}',             [CatalogController::class, 'showOeuvre']);
         Route::get('oeuvres/{id}/similar',     [CatalogController::class, 'similarOeuvres']);
-        Route::get('stats',                   [CatalogController::class, 'stats']);
-        Route::get('artisans',       [CatalogController::class, 'artisans']);
-        Route::get('artisans/{id}',  [CatalogController::class, 'showArtisan']);
+        Route::get('stats',                    [CatalogController::class, 'stats']);
+        Route::get('artisans',                 [CatalogController::class, 'artisans']);
+        Route::get('artisans/{id}',            [CatalogController::class, 'showArtisan']);
         Route::get('oeuvres/{id}/avis',        [AvisController::class, 'getAvisOeuvre']);
         Route::get('artisans/{id}/avis/stats', [AvisController::class, 'getStatistiquesAvisArtisan']);
     });
 
     /*
     |--------------------------------------------------------------------------
-    | WEBHOOKS (Public mais sécurisé par signature)
+    | WEBHOOKS (Public, sécurisé par signature)
     |--------------------------------------------------------------------------
     */
     Route::prefix('webhooks')->group(function () {
@@ -67,7 +66,7 @@ Route::prefix('v1')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | AUTH (Public - register & login)
+    | AUTH — Public
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
@@ -77,7 +76,7 @@ Route::prefix('v1')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | AUTH (Protégé - logout, revoke)
+    | AUTH — Protégé
     |--------------------------------------------------------------------------
     */
     Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
@@ -88,11 +87,11 @@ Route::prefix('v1')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | PROFIL CONNECTÉ (/me)
-    | Accessible à tous les rôles authentifiés avec email vérifié
+    | PROFIL (/me) — tous rôles authentifiés
+    | Note: email.verified retiré pour ne pas bloquer les profils non vérifiés
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['auth:sanctum', 'email.verified'])->prefix('me')->group(function () {
+    Route::middleware('auth:sanctum')->prefix('me')->group(function () {
         Route::get('/',       [AuthController::class, 'profil']);
         Route::put('/',       [AuthController::class, 'updateProfile']);
         Route::post('avatar', [AuthController::class, 'uploadAvatar']);
@@ -101,9 +100,10 @@ Route::prefix('v1')->group(function () {
     /*
     |--------------------------------------------------------------------------
     | ARTISAN
+    | Note: email.verified retiré — géré au niveau soumission d'œuvre
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['auth:sanctum', 'email.verified', 'role:artisan'])
+    Route::middleware(['auth:sanctum', 'role:artisan'])
         ->prefix('artisan')
         ->group(function () {
             Route::get('dashboard',              [ArtisanController::class, 'dashboard']);
@@ -125,41 +125,36 @@ Route::prefix('v1')->group(function () {
     | ACHETEUR
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['auth:sanctum', 'email.verified', 'role:acheteur'])
+    Route::middleware(['auth:sanctum', 'role:acheteur'])
         ->prefix('acheteur')
         ->group(function () {
-            // Panier
             Route::get('panier',                   [PanierController::class, 'getPanier']);
             Route::post('panier',                  [PanierController::class, 'ajouter']);
             Route::put('panier/{id}',              [PanierController::class, 'modifierQuantite']);
             Route::delete('panier/{id}',           [PanierController::class, 'supprimer']);
 
-            // Commandes
             Route::get('commandes',                [CommandeController::class, 'getCommandes']);
             Route::post('commandes',               [CommandeController::class, 'creerCommande']);
 
-            // Paiement
             Route::post('paiement/initier',        [PaiementController::class, 'initierPaiement']);
             Route::post('paiement/mock-confirmer', [PaiementController::class, 'mockConfirmer']);
 
-            // Avis
             Route::post('avis',                    [AvisController::class, 'creerAvis']);
 
-            // Favoris
             Route::get('favoris',                  [FavoriController::class, 'getFavoris']);
             Route::post('favoris',                 [FavoriController::class, 'ajouter']);
             Route::delete('favoris/{oeuvreId}',    [FavoriController::class, 'supprimer']);
 
-            // Notifications
             Route::get('notifications',            [NotificationController::class, 'getNotifications']);
         });
 
     /*
     |--------------------------------------------------------------------------
     | ADMIN
+    | Note: email.verified retiré — l'admin est créé manuellement en DB
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['auth:sanctum', 'email.verified', 'role:administrateur'])
+    Route::middleware(['auth:sanctum', 'role:administrateur'])
         ->prefix('admin')
         ->group(function () {
             Route::get('dashboard',            [ValidationController::class, 'dashboard']);

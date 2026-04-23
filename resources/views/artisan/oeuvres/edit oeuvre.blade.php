@@ -14,7 +14,7 @@
         </div>
 
         <div id="alert-box"></div>
-        <div id="loading" class="text-center py-8 text-gray-400">Chargement...</div>
+        <div id="loading" style="text-align:center;padding:2rem;color:var(--text-mid)">Chargement...</div>
 
         <form id="oeuvreForm" style="display:none">
 
@@ -53,12 +53,15 @@
             </div>
 
             <div style="display:flex;gap:1rem">
-                <button type="submit" class="btn btn-full" id="submitBtn">Enregistrer</button>
-                <button type="button" id="btnSoumettre"
-                    class="btn btn-full" style="background:#10b981;border-color:#10b981">
-                    Soumettre pour validation
-                </button>
-            </div>
+    <button type="submit" class="btn btn-full" id="submitBtn">💾 Enregistrer</button>
+    <button type="button" id="btnSoumettre"
+        class="btn btn-full" style="background:#10b981;border-color:#10b981">
+        🚀 Soumettre pour validation
+    </button>
+</div>
+<p style="color:var(--text-light);font-size:0.8rem;margin-top:0.5rem;text-align:center">
+    Les œuvres refusées ou en attente repassent en brouillon lors d'une modification.
+</p>
 
             <p class="auth-footer-text" style="margin-top:1rem">
                 <a href="{{ route('dashboard.artisan') }}">← Retour au dashboard</a>
@@ -67,23 +70,22 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-const oeuvreId = {{ $id }};
-const token    = localStorage.getItem('token');
+// "token" est déclaré en var dans layouts/app.blade.php
+const oeuvreId    = {{ $id }};
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
 async function loadCategories(selectedId) {
     try {
         const res  = await fetch('/api/v1/catalog/categories', { headers: { 'Accept': 'application/json' } });
         const json = await res.json();
-        // ✅ Fix : gérer les deux formats (tableau direct ou paginé)
         const cats = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : json.data?.data ?? []);
         const sel  = document.getElementById('categorie_id');
-
         cats.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.id;
-            opt.textContent = c.nom;
+            opt.textContent = c.nom ?? c.name;
             if (c.id == selectedId) opt.selected = true;
             sel.appendChild(opt);
         });
@@ -96,7 +98,7 @@ async function loadOeuvre() {
         const json = await res.json();
         const o    = json.data ?? json;
 
-        document.getElementById('loading').style.display = 'none';
+        document.getElementById('loading').style.display    = 'none';
         document.getElementById('oeuvreForm').style.display = 'block';
 
         document.getElementById('titre').value       = o.titre       ?? '';
@@ -107,14 +109,28 @@ async function loadOeuvre() {
 
         const images = o.images ?? [];
         if (images.length) {
-            document.getElementById('images-actuelles').innerHTML = images.map(img => `
+            document.getElementById('images-actuelles').innerHTML = images.map(img => {
+                const src = img.url ?? (img.chemin ? `/storage/${img.chemin}` : '');
+                return `
                 <div style="position:relative">
-                    <img src="${img.url}" style="width:70px;height:70px;object-fit:cover;border-radius:0.25rem">
+                    <img src="${src}" style="width:70px;height:70px;object-fit:cover;border-radius:0.25rem">
                     <button type="button" onclick="supprimerImage(${img.id}, this)"
                         style="position:absolute;top:-6px;right:-6px;background:red;color:white;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;line-height:18px;text-align:center">✕</button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
+        // Afficher un message selon le statut
+const alertBox = document.getElementById('alert-box');
+if (o.statut === 'en_attente') {
+    alertBox.innerHTML = `<div class="alert" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem">
+        ⏳ Cette œuvre est en attente de validation. Vous pouvez encore la modifier (elle repassera en brouillon).
+    </div>`;
+} else if (o.statut === 'refusee') {
+    alertBox.innerHTML = `<div class="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem">
+        ✗ Œuvre refusée — Motif : <strong>${o.motif_refus ?? '(non précisé)'}</strong><br>
+        <small>Modifiez votre œuvre et soumettez-la à nouveau.</small>
+    </div>`;
+}
     } catch (e) {
         document.getElementById('loading').textContent = 'Œuvre introuvable.';
         console.error(e);
@@ -162,10 +178,6 @@ async function sauvegarder(soumettre = false) {
         const json = await res.json();
 
         if (!res.ok) {
-            if (res.status === 403) {
-                alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Accès refusé (403) : email non vérifié ou rôle incorrect.</li></ul></div>`;
-                return;
-            }
             const msgs = json.errors
                 ? Object.values(json.errors).flat().map(e=>`<li>${e}</li>`).join('')
                 : `<li>${json.message ?? 'Erreur.'}</li>`;
@@ -186,11 +198,16 @@ async function sauvegarder(soumettre = false) {
         }
 
         if (soumettre) {
-            await fetch(`/api/v1/artisan/oeuvres/${oeuvreId}/soumettre`, {
+            const soumRes  = await fetch(`/api/v1/artisan/oeuvres/${oeuvreId}/soumettre`, {
                 method: 'PUT',
                 headers: { ...authHeaders, 'X-XSRF-TOKEN': xsrf },
                 credentials: 'include',
             });
+            const soumJson = await soumRes.json();
+            if (!soumRes.ok || !soumJson.success) {
+                alertBox.innerHTML = `<div class="alert alert-error"><ul><li>Soumission échouée : ${soumJson.message ?? 'Erreur.'}</li></ul></div>`;
+                return;
+            }
         }
 
         alertBox.innerHTML = `<div class="alert alert-success"><ul><li>${soumettre ? 'Soumise pour validation ✓' : 'Modifications enregistrées ✓'}</li></ul></div>`;
@@ -208,5 +225,6 @@ document.getElementById('btnSoumettre').addEventListener('click', function() { s
 
 loadOeuvre();
 </script>
+@endpush
 
 @endsection
