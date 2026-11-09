@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build:netlify"
+  publish = "netlify-dist"
+
+[[redirects]]
+  from = "/catalogue/oeuvres/*"
+  to = "/__netlify/oeuvre.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/catalogue/artisans/*"
+  to = "/__netlify/artisan.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/artisan/oeuvres/*/edit"
+  to = "/__netlify/edit-oeuvre.html"
+  status = 200
+  force = true

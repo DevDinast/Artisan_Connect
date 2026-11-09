@@ -16,6 +16,7 @@
 /public/build
 /public/hot
 /public/storage
+/netlify-dist
 /storage/*.key
 /storage/pail
 /vendor
@@ -23,3 +24,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 resources/views/login.blade.php
+.neon
+.backup-deploiement-*/

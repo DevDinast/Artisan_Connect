@@ -1,8 +1,11 @@
 #!/bin/bash
-php artisan migrate:fresh --force
-php artisan db:seed --force
-php artisan storage:link
+set -e
+
+cd /var/www/html
+
+php artisan storage:link || true
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-apache2-foreground
+
+exec "$@"

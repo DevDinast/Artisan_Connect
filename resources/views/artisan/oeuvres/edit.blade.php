@@ -73,7 +73,7 @@
 @push('scripts')
 <script>
 // "token" est déclaré en var dans layouts/app.blade.php
-const oeuvreId    = {{ $id }};
+const oeuvreId    = Number(window.location.pathname.match(/\/artisan\/oeuvres\/([^/]+)\/edit$/)?.[1] ?? {{ $id }});
 const authHeaders = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
 
 async function loadCategories(selectedId) {
