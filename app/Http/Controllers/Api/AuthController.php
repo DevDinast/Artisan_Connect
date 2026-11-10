@@ -87,6 +87,13 @@ class AuthController extends Controller
             ], 422);
 
         } catch (\Exception $e) {
+            $databaseError = $e->getPrevious()?->getMessage() ?? $e->getMessage();
+            $databaseError = preg_replace(
+                '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i',
+                '[email redacted]',
+                $databaseError
+            );
+
             Log::error('Échec de l’inscription', [
                 'reference' => $reference,
                 'step' => $registrationStep,
@@ -94,6 +101,7 @@ class AuthController extends Controller
                 'sqlstate' => (string) $e->getCode(),
                 'previous_exception' => $e->getPrevious() ? get_class($e->getPrevious()) : null,
                 'previous_sqlstate' => $e->getPrevious() ? (string) $e->getPrevious()->getCode() : null,
+                'database_error' => $databaseError,
             ]);
 
             if (DB::transactionLevel() > 0) {
