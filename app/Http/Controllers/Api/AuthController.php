@@ -44,6 +44,9 @@ class AuthController extends Controller
             $registrationStep = 'create_user';
             $user = User::create($data);
 
+            $registrationStep = 'verify_transaction_after_user';
+            DB::select('SELECT 1');
+
             switch ($user->role) {
                 case 'artisan':
                     $registrationStep = 'create_artisan_profile';
