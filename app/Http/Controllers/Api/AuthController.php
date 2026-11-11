@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Artisan;
 use App\Models\Acheteur;
@@ -16,6 +18,9 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $registrationStep = 'validation';
+        $reference = (string) Str::uuid();
+
         try {
             $data = $request->validate([
                 'name'      => 'required|string|max:20',
@@ -26,32 +31,43 @@ class AuthController extends Controller
                 'avatar'    => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
+            $registrationStep = 'begin_transaction';
             DB::beginTransaction();
 
             if ($request->hasFile('avatar')) {
+                $registrationStep = 'store_avatar';
                 $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
             }
 
             $data['actif'] = true;
 
+            $registrationStep = 'create_user';
             $user = User::create($data);
+
+            $registrationStep = 'verify_transaction_after_user';
+            DB::select('SELECT 1');
 
             switch ($user->role) {
                 case 'artisan':
+                    $registrationStep = 'create_artisan_profile';
                     Artisan::create(['user_id' => $user->id, 'compte_valide' => false]);
                     break;
                 case 'acheteur':
+                    $registrationStep = 'create_buyer_profile';
                     Acheteur::create(['user_id' => $user->id]);
                     break;
             }
 
             // Email de vérification (RG05 : obligatoire avant soumission d'œuvre)
+            $registrationStep = 'send_verification_email';
             $user->sendEmailVerificationNotification();
 
             // CORRECTION : Auth::login() retiré — inutile en API pure Sanctum
             // Sanctum gère l'auth via token uniquement, pas de session
+            $registrationStep = 'create_access_token';
             $token = $user->createToken('authToken')->plainTextToken;
 
+            $registrationStep = 'commit_transaction';
             DB::commit();
 
             // CORRECTION : format de réponse harmonisé { success, data, message }
@@ -74,14 +90,32 @@ class AuthController extends Controller
             ], 422);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            // CORRECTION : $e->getMessage() retiré — dangereux en prod car expose les détails internes
+            $databaseError = $e->getPrevious()?->getMessage() ?? $e->getMessage();
+            $databaseError = preg_replace(
+                '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i',
+                '[email redacted]',
+                $databaseError
+            );
+
+            Log::error('Échec de l’inscription', [
+                'reference' => $reference,
+                'step' => $registrationStep,
+                'exception' => get_class($e),
+                'sqlstate' => (string) $e->getCode(),
+                'previous_exception' => $e->getPrevious() ? get_class($e->getPrevious()) : null,
+                'previous_sqlstate' => $e->getPrevious() ? (string) $e->getPrevious()->getCode() : null,
+                'database_error' => $databaseError,
+            ]);
+
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             return response()->json([
                 'success' => false,
                 'data'    => null,
-               'message' => $e->getMessage(), // ← ajouter
-                'file'    => $e->getFile(),    // ← ajouter
-                'line'    => $e->getLine(),    // ← ajouter
+                'message' => 'Une erreur est survenue pendant l’inscription.',
+                'reference' => $reference,
             ], 500);
         }
     }
