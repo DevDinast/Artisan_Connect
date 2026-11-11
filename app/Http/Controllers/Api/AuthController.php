@@ -21,12 +21,22 @@ class AuthController extends Controller
         $registrationStep = 'validation';
         $reference = (string) Str::uuid();
         $registrationQueries = [];
+        $attemptedQueries = [];
 
         DB::listen(function ($query) use (&$registrationQueries, &$registrationStep): void {
             if (count($registrationQueries) < 20) {
                 $registrationQueries[] = [
                     'step' => $registrationStep,
                     'sql' => $query->sql,
+                ];
+            }
+        });
+
+        DB::beforeExecuting(function (string $sql) use (&$attemptedQueries, &$registrationStep): void {
+            if (count($attemptedQueries) < 30) {
+                $attemptedQueries[] = [
+                    'step' => $registrationStep,
+                    'sql' => $sql,
                 ];
             }
         });
@@ -116,6 +126,7 @@ class AuthController extends Controller
                 'previous_sqlstate' => $e->getPrevious() ? (string) $e->getPrevious()->getCode() : null,
                 'database_error' => $databaseError,
                 'successful_queries' => $registrationQueries,
+                'attempted_queries' => $attemptedQueries,
             ]);
 
             if (DB::transactionLevel() > 0) {
