@@ -29,6 +29,28 @@ class ApiAuthTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com'
         ]);
+
+        $this->assertDatabaseHas('acheteurs', [
+            'user_id' => User::where('email', 'test@example.com')->value('id'),
+        ]);
+    }
+
+    public function test_artisan_registration_creates_profile(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Test Artisan',
+            'email' => 'artisan@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'artisan',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonStructure(['success', 'data' => ['user', 'token'], 'message']);
+
+        $this->assertDatabaseHas('artisans', [
+            'user_id' => User::where('email', 'artisan@example.com')->value('id'),
+        ]);
     }
 
     /**

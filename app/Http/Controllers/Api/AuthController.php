@@ -5,14 +5,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Artisan;
 use App\Models\Acheteur;
-use App\Models\Administrateur;
 
 class AuthController extends Controller
 {
@@ -20,26 +18,8 @@ class AuthController extends Controller
     {
         $registrationStep = 'validation';
         $reference = (string) Str::uuid();
-        $registrationQueries = [];
-        $attemptedQueries = [];
-
-        DB::listen(function ($query) use (&$registrationQueries, &$registrationStep): void {
-            if (count($registrationQueries) < 20) {
-                $registrationQueries[] = [
-                    'step' => $registrationStep,
-                    'sql' => $query->sql,
-                ];
-            }
-        });
-
-        DB::beforeExecuting(function (string $sql) use (&$attemptedQueries, &$registrationStep): void {
-            if (count($attemptedQueries) < 30) {
-                $attemptedQueries[] = [
-                    'step' => $registrationStep,
-                    'sql' => $sql,
-                ];
-            }
-        });
+        $user = null;
+        $avatarPath = null;
 
         try {
             $data = $request->validate([
@@ -51,21 +31,17 @@ class AuthController extends Controller
                 'avatar'    => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
-            $registrationStep = 'begin_transaction';
-            DB::beginTransaction();
-
             if ($request->hasFile('avatar')) {
                 $registrationStep = 'store_avatar';
-                $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+                $data['avatar'] = $avatarPath;
             }
 
             $data['actif'] = true;
 
+            // Keep each write in autocommit mode; the explicit Neon transaction was repeatedly aborted.
             $registrationStep = 'create_user';
             $user = User::create($data);
-
-            $registrationStep = 'verify_transaction_after_user';
-            DB::select('SELECT 1');
 
             switch ($user->role) {
                 case 'artisan':
@@ -87,9 +63,6 @@ class AuthController extends Controller
             $registrationStep = 'create_access_token';
             $token = $user->createToken('authToken')->plainTextToken;
 
-            $registrationStep = 'commit_transaction';
-            DB::commit();
-
             // CORRECTION : format de réponse harmonisé { success, data, message }
             return response()->json([
                 'success' => true,
@@ -110,13 +83,6 @@ class AuthController extends Controller
             ], 422);
 
         } catch (\Exception $e) {
-            $databaseError = $e->getPrevious()?->getMessage() ?? $e->getMessage();
-            $databaseError = preg_replace(
-                '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i',
-                '[email redacted]',
-                $databaseError
-            );
-
             Log::error('Échec de l’inscription', [
                 'reference' => $reference,
                 'step' => $registrationStep,
@@ -124,13 +90,29 @@ class AuthController extends Controller
                 'sqlstate' => (string) $e->getCode(),
                 'previous_exception' => $e->getPrevious() ? get_class($e->getPrevious()) : null,
                 'previous_sqlstate' => $e->getPrevious() ? (string) $e->getPrevious()->getCode() : null,
-                'database_error' => $databaseError,
-                'successful_queries' => $registrationQueries,
-                'attempted_queries' => $attemptedQueries,
             ]);
 
-            if (DB::transactionLevel() > 0) {
-                DB::rollBack();
+            if ($user) {
+                try {
+                    DB::purge();
+                    $user->delete();
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Nettoyage incomplet après un échec d’inscription', [
+                        'reference' => $reference,
+                        'exception' => get_class($cleanupException),
+                    ]);
+                }
+            }
+
+            if ($avatarPath) {
+                try {
+                    Storage::disk('public')->delete($avatarPath);
+                } catch (\Exception $cleanupException) {
+                    Log::warning('Suppression de l’avatar échouée après un échec d’inscription', [
+                        'reference' => $reference,
+                        'exception' => get_class($cleanupException),
+                    ]);
+                }
             }
 
             return response()->json([
@@ -149,9 +131,9 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // CORRECTION : le 2ème paramètre "true" (remember me) retiré
-        // Inutile en API Sanctum — les tokens ont leur propre durée de vie
-        if (!Auth::attempt($data)) {
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user || !Hash::check($data['password'], $user->password)) {
             // CORRECTION : format de réponse harmonisé
             return response()->json([
                 'success' => false,
@@ -160,7 +142,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $user = User::find(Auth::id());
         $user->tokens()->delete();
         $token = $user->createToken('authToken')->plainTextToken;
 
